@@ -1,0 +1,2766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HBP CHIT'S - Cloud Database System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase App & Firestore SDKs (Compat v10) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body class="bg-gray-50 font-sans antialiased text-gray-800 relative">
+
+    <div id="loading-screen" class="fixed inset-0 bg-slate-900/90 z-[200] flex flex-col items-center justify-center backdrop-blur-sm hidden">
+        <div class="h-16 w-16 bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 rounded-xl flex items-center justify-center shadow-lg border border-amber-300 mb-4">
+            <i class="fa-solid fa-cloud-arrow-down text-slate-900 text-2xl animate-bounce"></i>
+        </div>
+        <h2 class="text-xl font-black text-white tracking-widest uppercase mb-1">Syncing Cloud Database</h2>
+        <p class="text-amber-400 text-xs font-bold uppercase tracking-widest">Please wait...</p>
+    </div>
+
+    <div id="login-screen" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center backdrop-blur-md">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full mx-4 border-t-4 border-amber-500">
+            <div class="flex justify-center mb-6">
+                <div class="h-16 w-16 bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 rounded-xl flex items-center justify-center shadow-lg border border-amber-300">
+                    <span class="text-xl font-black text-slate-900 tracking-tighter">HBP</span>
+                </div>
+            </div>
+            <h2 class="text-2xl font-black text-center text-slate-900 mb-1 uppercase">HBP CHIT'S</h2>
+            <p class="text-xs text-center text-slate-500 mb-6 uppercase tracking-widest font-bold">Cloud Auth</p>
+            
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Username</label>
+                    <input type="text" id="login-user" required class="w-full text-sm border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-gray-50" placeholder="Enter username">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
+                    <input type="password" id="login-pass" required class="w-full text-sm border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-gray-50" placeholder="Enter password">
+                </div>
+                <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold py-3 rounded-lg transition cursor-pointer mt-4 shadow-md">
+                    Secure Login <i class="fa-solid fa-arrow-right-to-bracket ml-2"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="flex h-screen overflow-hidden">
+        
+        <aside class="w-64 bg-slate-900 text-white flex flex-col hidden md:flex">
+            <div class="p-5 border-b border-slate-800 flex items-center gap-3 bg-slate-950">
+                <div class="relative h-11 w-11 shrink-0 bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20 border border-amber-300/30">
+                    <div class="absolute inset-1 rounded-lg bg-slate-950 flex items-center justify-center">
+                        <div class="relative flex items-center justify-center">
+                            <i class="fa-solid fa-arrows-spin text-amber-500/40 text-lg absolute animate-spin-slow"></i>
+                            <span class="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500 tracking-tighter z-10">HBP</span>
+                        </div>
+                    </div>
+                    <div class="absolute -bottom-1 -right-1 bg-amber-500 text-slate-950 h-4 w-4 rounded-full flex items-center justify-center border-2 border-slate-950">
+                        <i class="fa-solid fa-indian-rupee-sign text-[8px] font-black"></i>
+                    </div>
+                </div>
+                <div>
+                    <span class="text-base font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200 uppercase block leading-none">HBP CHIT'S</span>
+                    <span class="text-[9px] text-sky-400 font-bold uppercase tracking-widest mt-1 block"><i class="fa-solid fa-cloud text-[8px]"></i> CLOUD SYNCED</span>
+                </div>
+            </div>
+            
+            <nav class="flex-1 p-4 space-y-2" id="sidebar-nav">
+                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="w-full flex items-center gap-3 px-4 py-3 bg-slate-800 text-amber-400 rounded-lg font-medium transition text-left cursor-pointer">
+                    <i class="fa-solid fa-chart-pie w-5"></i> Dashboard
+                </button>
+                <button onclick="switchTab('groups')" id="tab-groups" class="w-full flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition text-left cursor-pointer">
+                    <i class="fa-solid fa-users w-5"></i> Chit Groups
+                </button>
+                <button onclick="switchTab('payments')" id="tab-payments" class="w-full flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition text-left cursor-pointer">
+                    <i class="fa-solid fa-money-bill-transfer w-5"></i> Payments
+                </button>
+                <button onclick="switchTab('auctions')" id="tab-auctions" class="w-full flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition text-left cursor-pointer">
+                    <i class="fa-solid fa-gavel w-5"></i> Auctions
+                </button>
+                <button onclick="switchTab('reports')" id="tab-reports" class="w-full flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-slate-800 hover:text-white rounded-lg transition text-left cursor-pointer">
+                    <i class="fa-solid fa-file-invoice-dollar w-5"></i> Reports Desk
+                </button>
+            </nav>
+            <div class="p-4 border-t border-slate-800 text-xs text-slate-500 text-center font-medium flex justify-between items-center">
+                <span>v3.0.0 &copy; 2026</span>
+                <button onclick="handleLogout()" class="text-rose-400 hover:text-rose-300 cursor-pointer"><i class="fa-solid fa-power-off"></i> Logout</button>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col overflow-y-auto">
+            
+            <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-10">
+                <div class="flex items-center gap-3">
+                    <div class="md:hidden flex items-center gap-2">
+                        <div class="relative h-9 w-9 bg-slate-950 rounded-lg flex items-center justify-center border border-amber-500/40 shadow-sm">
+                            <span class="text-xs font-black text-amber-400">HBP</span>
+                        </div>
+                    </div>
+                    <h1 id="page-title" class="text-xl font-bold text-gray-900">Dashboard Overview</h1>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <div class="flex md:hidden items-center gap-1 bg-slate-100 p-1 rounded-lg border border-gray-200 text-xs">
+                        <button onclick="switchTab('dashboard')" class="px-2 py-1 rounded hover:bg-white text-slate-700 font-bold"><i class="fa-solid fa-chart-pie"></i></button>
+                        <button onclick="switchTab('groups')" class="px-2 py-1 rounded hover:bg-white text-slate-700 font-bold"><i class="fa-solid fa-users"></i></button>
+                        <button onclick="switchTab('payments')" class="px-2 py-1 rounded hover:bg-white text-slate-700 font-bold"><i class="fa-solid fa-money-bill-transfer"></i></button>
+                        <button onclick="switchTab('auctions')" class="px-2 py-1 rounded hover:bg-white text-slate-700 font-bold"><i class="fa-solid fa-gavel"></i></button>
+                        <button onclick="switchTab('reports')" class="px-2 py-1 rounded hover:bg-white text-slate-700 font-bold"><i class="fa-solid fa-file-invoice-dollar"></i></button>
+                        <button onclick="handleLogout()" class="px-2 py-1 rounded hover:bg-rose-100 text-rose-600 font-bold ml-2"><i class="fa-solid fa-power-off"></i></button>
+                    </div>
+                    <div class="text-right hidden sm:block">
+                        <p class="text-sm font-black text-slate-900 uppercase tracking-tight">HBP CHIT'S FINANCIAL SERVICES</p>
+                        <p class="text-[10px] font-bold text-sky-600 uppercase tracking-widest leading-none mt-0.5">FIREBASE CLOUD CONNECTED</p>
+                    </div>
+                    <div class="h-10 w-10 relative bg-gradient-to-tr from-slate-800 to-slate-950 rounded-full hidden sm:flex items-center justify-center text-amber-400 font-black text-sm shadow-md border border-slate-700 tracking-tighter">
+                        HBP
+                        <span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-sky-500 border-2 border-white animate-pulse"></span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="p-6 max-w-7xl w-full mx-auto space-y-6">
+                
+                <div id="view-dashboard" class="tab-view space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center">
+                            <div>
+                                <p class="text-sm text-gray-500 font-medium uppercase">Total Value Managed</p>
+                                <h3 id="dash-total-funds" class="text-2xl font-bold mt-1 text-gray-900">Rs. 0</h3>
+                            </div>
+                            <div class="p-3 bg-amber-50 text-amber-600 rounded-lg"><i class="fa-solid fa-vault text-xl"></i></div>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center">
+                            <div>
+                                <p class="text-sm text-gray-500 font-medium uppercase">Active Chit Pools</p>
+                                <h3 id="dash-active-pools" class="text-2xl font-bold mt-1 text-emerald-600">0 Active Pools</h3>
+                            </div>
+                            <div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg"><i class="fa-solid fa-layer-group text-xl"></i></div>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center">
+                            <div>
+                                <p class="text-sm text-gray-500 font-medium uppercase">Closed Chit Pools</p>
+                                <h3 id="dash-closed-pools" class="text-2xl font-bold mt-1 text-blue-600">0 Closed Pools</h3>
+                            </div>
+                            <div class="p-3 bg-blue-50 text-blue-600 rounded-lg"><i class="fa-solid fa-circle-check text-xl"></i></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-groups" class="tab-view hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm h-fit max-h-[85vh] flex flex-col">
+                            <h3 class="font-bold text-gray-900 text-base mb-3"><i class="fa-solid fa-folder-plus text-amber-500 mr-2"></i>Launch Group & Setup</h3>
+                            <form id="groupForm" onsubmit="createNewGroup(event)" class="space-y-3 overflow-y-auto flex-1 pr-1">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-500 mb-1">Group ID / Code</label>
+                                    <input type="text" id="g-code" placeholder="e.g., AB" required class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-500 mb-1">Total Value (Rs.)</label>
+                                    <input type="number" id="g-value" placeholder="10000" required class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none">
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500 mb-1">Tenure (Months)</label>
+                                        <input type="number" id="g-months" placeholder="e.g., 4" oninput="generateBulkMonthInputs()" required class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-amber-600 mb-1">Start Month</label>
+                                        <input type="month" id="g-start-month" onchange="generateBulkMonthInputs()" required class="w-full text-sm border border-amber-300 bg-amber-50/30 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none">
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500 mb-1">Total Members Limit</label>
+                                        <input type="number" id="g-members" placeholder="e.g., 20" required class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1">Fixed Due Day (1-31)</label>
+                                        <input type="number" id="g-due-day" min="1" max="31" placeholder="e.g., 10" required class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none">
+                                    </div>
+                                </div>
+
+                                <div id="bulk-months-container" class="space-y-3 pt-2 hidden">
+                                    <span class="text-xs font-bold text-amber-600 block uppercase border-b border-gray-100 pb-1"><i class="fa-solid fa-calendar-days mr-1"></i> Upfront Month-wise Configuration</span>
+                                    <div id="bulk-inputs-list" class="space-y-3"></div>
+                                </div>
+
+                                <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold py-2.5 rounded-lg transition cursor-pointer mt-2">Save & Register Group</button>
+                            </form>
+                        </div>
+                        
+                        <div class="lg:col-span-2 space-y-6">
+                            <div class="space-y-4">
+                                <h2 class="text-lg font-bold text-gray-900">Active Live Groups</h2>
+                                <div id="groups-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                            </div>
+                            <div class="space-y-4 pt-4 border-t border-gray-200">
+                                <h2 class="text-lg font-bold text-gray-900">Closed/Inactive Live Groups</h2>
+                                <div id="closed-groups-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-payments" class="tab-view hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm h-fit">
+                            <h3 class="font-bold text-gray-900 text-base mb-3"><i class="fa-solid fa-file-invoice mr-2 text-amber-500"></i>Add New Payment Receipt</h3>
+                            <form id="paymentForm" onsubmit="processPaymentSubmission(event)" class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-500 mb-1">Chit Group Dropdown</label>
+                                    <select id="p-group-select" onchange="syncPaymentFormDynamics()" required class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white">
+                                        <option value="">-- Choose Active Pool --</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-500 mb-1">Member Name Dropdown</label>
+                                    <select id="p-name-select" onchange="calculateLivePaymentDue()" required class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white">
+                                        <option value="">-- Select Member --</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1"><i class="fa-solid fa-list-ol text-amber-500 mr-1"></i> Payment Allocation</label>
+                                        <input type="text" id="p-install-select" readonly value="Auto-adjusts to Backlogs" class="w-full text-sm border border-gray-200 rounded-lg p-2 bg-gray-50 text-gray-500 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500 mb-1">Amount Paid (Rs.)</label>
+                                        <input type="number" id="p-amount" oninput="calculateLivePaymentDue()" placeholder="Enter lump sum" required class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-rose-600 mb-1">Total Dues (Rs.)</label>
+                                        <input type="text" id="p-due-amount" readonly placeholder="0" class="w-full text-sm border border-gray-200 rounded-lg p-2 bg-gray-50 text-rose-700 font-bold focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1"><i class="fa-solid fa-credit-card text-amber-500 mr-1"></i> Payment Mode</label>
+                                        <select id="p-mode" required class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white">
+                                            <option value="Cash">Cash</option>
+                                            <option value="Phone Pe">Phone Pe</option>
+                                            <option value="Google Pe">Google Pe</option>
+                                            <option value="Bank/Transfer">Bank/Transfer</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1"><i class="fa-regular fa-calendar-days mr-1 text-amber-500"></i> Demand Due Date</label>
+                                        <input type="text" id="p-date" readonly class="w-full text-sm border border-gray-200 rounded-lg p-2 bg-gray-50 text-gray-500 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 mb-1"><i class="fa-solid fa-calendar-check mr-1 text-emerald-500"></i> Date of Payment</label>
+                                        <input type="date" id="p-payment-date" required class="w-full text-sm border border-amber-200 rounded-lg p-2 bg-amber-50/50 focus:ring-1 focus:ring-amber-500 focus:outline-none">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Account Status</label>
+                                    <input type="text" id="p-status" readonly placeholder="Auto Evaluated" class="w-full text-sm border border-gray-200 rounded-lg p-2 bg-gray-50 text-gray-500 font-bold focus:outline-none">
+                                </div>
+                                <button type="submit" id="btn-submit-payment" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold py-2.5 rounded-lg transition cursor-pointer mt-2">Log to Ledger Table</button>
+                            </form>
+                        </div>
+                        <div class="lg:col-span-2 space-y-3">
+                            <h2 class="text-lg font-bold text-gray-900">Collections Ledger Matrix</h2>
+                            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse text-sm min-w-[700px]">
+                                        <thead class="bg-gray-100 font-semibold text-gray-600 border-b border-gray-200">
+                                            <tr class="text-xs uppercase">
+                                                <th class="p-4">Member Name</th>
+                                                <th class="p-4">Chit Group</th>
+                                                <th class="p-4">Amount Paid</th>
+                                                <th class="p-4">Due Amt</th>
+                                                <th class="p-4">Target Month</th>
+                                                <th class="p-4">Mode</th>
+                                                <th class="p-4">Payment Date</th>
+                                                <th class="p-4">Status</th>
+                                                <th class="p-4 text-center">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="payment-ledger-body" class="divide-y divide-gray-100 font-medium text-gray-700"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-auctions" class="tab-view hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        
+                        <div class="lg:col-span-4 space-y-6">
+                            
+                            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm h-fit">
+                                <h3 class="font-bold text-gray-900 text-base mb-3"><i class="fa-solid fa-gavel text-amber-500 mr-2"></i>1. Close Month Auction</h3>
+                                <form id="auctionForm" onsubmit="logNewAuctionEntry(event)" class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500 mb-1">Select Chit Group</label>
+                                        <select id="a-group-select" onchange="syncAuctionFormDropdowns()" required class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white">
+                                            <option value="">-- Choose Active Pool --</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500 mb-1">Select Target Month</label>
+                                        <select id="a-month-select" onchange="autoPopulateBidAmount()" required class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white">
+                                            <option value="">-- Select Month --</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500 mb-1">Pre-planned Bid Discount (Rs.)</label>
+                                        <input type="text" id="a-bid-amount" readonly placeholder="Automated value" class="w-full text-sm border border-gray-300 rounded-lg p-2 bg-gray-50 text-gray-500 font-semibold focus:outline-none">
+                                    </div>
+                                    <hr class="border-gray-100 my-2">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500 mb-1 text-amber-600">Bidder Name Dropdown</label>
+                                        <select id="a-bidder-select" required class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white">
+                                            <option value="">-- Select Bidder --</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500 mb-1 text-amber-600">Bid Close Date</label>
+                                        <input type="date" id="a-bid-date" required class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white">
+                                    </div>
+                                    <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold py-2.5 rounded-lg transition cursor-pointer mt-1">Confirm Winner</button>
+                                </form>
+                            </div>
+
+                            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm h-fit">
+                                <h3 class="font-bold text-gray-900 text-base mb-3"><i class="fa-solid fa-hand-holding-dollar text-emerald-500 mr-2"></i>2. Pay Lifted Amount (Bid Discount)</h3>
+                                <form id="payoutForm" onsubmit="logLiftedAmountPayout(event)" class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500 mb-1">Pending Unpaid Auctions</label>
+                                        <select id="po-auction-select" onchange="syncPayoutLiftedAmount()" required class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white">
+                                            <option value="">-- Select Pending Auction --</option>
+                                        </select>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-rose-600 mb-1">Pending Bal. (Rs.)</label>
+                                            <input type="text" id="po-lifted-amount" readonly placeholder="Auto calculated" class="w-full text-sm border border-gray-300 rounded-lg p-2 bg-gray-50 text-gray-800 font-bold focus:outline-none">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-emerald-600 mb-1">Amount to Pay Now (Rs.)</label>
+                                            <input type="number" id="po-pay-amount" required placeholder="e.g., 5000" min="1" class="w-full text-sm border border-emerald-300 rounded-lg p-2 focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-700 mb-1">Payout Date</label>
+                                            <input type="date" id="po-date" required class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-700 mb-1">Payment Mode</label>
+                                            <select id="po-mode" required class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-emerald-500 focus:outline-none bg-white">
+                                                <option value="Cash">Cash</option>
+                                                <option value="Phone Pe">Phone Pe</option>
+                                                <option value="Google Pe">Google Pe</option>
+                                                <option value="Bank/Transfer">Bank/Transfer</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold py-2.5 rounded-lg transition cursor-pointer mt-1">Settle Amount</button>
+                                </form>
+                            </div>
+
+                        </div>
+
+                        <div class="lg:col-span-8 space-y-3">
+                            <h2 class="text-lg font-bold text-gray-900">Historical Auction & Payout Registry Desk</h2>
+                            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse text-sm min-w-[700px]">
+                                        <thead class="bg-gray-100 font-semibold text-gray-600 border-b border-gray-200">
+                                            <tr class="text-xs uppercase">
+                                                <th class="p-4">Group</th>
+                                                <th class="p-4">Month</th>
+                                                <th class="p-4">Winner</th>
+                                                <th class="p-4">Bid Disc.</th>
+                                                <th class="p-4">Paid</th>
+                                                <th class="p-4">Payout Dates</th>
+                                                <th class="p-4">Payout Mode</th>
+                                                <th class="p-4 text-center">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="auction-ledger-body" class="divide-y divide-gray-100 font-medium text-gray-700"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-reports" class="tab-view hidden space-y-6">
+                    <div class="p-5 bg-gradient-to-r from-slate-900 to-slate-950 rounded-xl text-white shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-l-4 border-amber-500">
+                        <div class="flex items-center gap-4">
+                            <div class="h-12 w-12 rounded-xl bg-amber-500 flex items-center justify-center text-slate-950 shadow-md">
+                                <i class="fa-solid fa-arrows-spin text-2xl"></i>
+                            </div>
+                            <div>
+                                <span class="text-[11px] font-bold uppercase text-amber-400 tracking-widest block">HBP CHIT'S AUDIT CENTER</span>
+                                <h2 id="report-deficit-sum" class="text-3xl font-black tracking-tight mt-0.5">Rs. 0</h2>
+                                <p class="text-[10px] text-slate-400 font-medium mt-0.5 italic">* Total filtered ledger deficit balance outstanding</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <button onclick="exportToPDF()" class="flex-1 sm:flex-initial bg-rose-600 hover:bg-rose-700 px-4 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+                                <i class="fa-solid fa-file-pdf"></i> Export PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 border-b border-gray-100 pb-5">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5"><i class="fa-solid fa-file-lines text-amber-500 mr-1"></i> Report Type</label>
+                                <select id="report-type-select" onchange="toggleReportTypeView(); compileStatusReport();" class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white">
+                                    <option value="STANDARD" selected>Standard Detailed Ledger</option>
+                                    <option value="CHIT_GROUP">Chit Group (At a Glance)</option>
+                                    <option value="CONSOLIDATE">Consolidate (At a Glance)</option>
+                                </select>
+                            </div>
+                            <div id="filter-group-container">
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5"><i class="fa-solid fa-layer-group text-amber-500 mr-1"></i> Filter Group</label>
+                                <select id="report-group-search" onchange="syncReportFiltersDropdowns(); compileStatusReport();" class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white">
+                                    <option value="ALL">-- All Registered Groups --</option>
+                                </select>
+                            </div>
+                            <div id="filter-member-container">
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5"><i class="fa-solid fa-user-tag text-amber-500 mr-1"></i> Filter Member</label>
+                                <select id="report-member-search" onchange="compileStatusReport()" class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white">
+                                    <option value="ALL">-- All Registered Members --</option>
+                                </select>
+                            </div>
+                            <div id="filter-month-container">
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5"><i class="fa-regular fa-calendar-days text-amber-500 mr-1"></i> Filter By Month</label>
+                                <select id="report-month-search" onchange="compileStatusReport()" class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white">
+                                    <option value="ALL">-- All Target Months --</option>
+                                </select>
+                            </div>
+                            <div id="filter-status-container">
+                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5"><i class="fa-solid fa-filter text-amber-500 mr-1"></i> Deficit Flag</label>
+                                <select id="report-status-filter" onchange="compileStatusReport()" class="w-full text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white">
+                                    <option value="ALL" selected>Show All Matrix Records</option>
+                                    <option value="DEFICIT">Deficit Balance Only (> Rs. 0)</option>
+                                    <option value="CLEAR">Fully Paid Records Only</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-2">
+                            <h3 id="dynamic-report-title" class="text-sm font-bold text-slate-800 uppercase tracking-wide bg-amber-50/50 p-3 rounded border border-amber-100">
+                                STANDARD DETAILED LEDGER REPORT | Filters -> Group: ALL | Member: ALL | Month: ALL | Status: ALL
+                            </h3>
+                        </div>
+
+                        <div id="primary-report-subheading-container" class="mb-2">
+                            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide bg-amber-50/50 p-3 rounded border border-amber-100 flex items-center">
+                                <i class="fa-solid fa-file-invoice-dollar mr-2 text-amber-500"></i> Statement of Account/Collection Ledger (Based on active filters)
+                            </h3>
+                        </div>
+
+                        <div class="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden mb-6">
+                            <div class="overflow-x-auto">
+                                <table id="report-table-node" class="w-full text-left border-collapse text-sm min-w-[800px]">
+                                    <thead class="bg-slate-900 font-semibold text-slate-200 border-b border-slate-800">
+                                        <tr class="text-xs uppercase" id="report-table-head-row">
+                                            <th class="p-4 w-12">Sl. No</th>
+                                            <th class="p-4">Member Name</th>
+                                            <th class="p-4">Group & Value</th>
+                                            <th class="p-4">Inst. Month</th>
+                                            <th class="p-4">Paid Amt</th>
+                                            <th class="p-4">Due Amt</th>
+                                            <th class="p-4">Pay Date</th>
+                                            <th class="p-4">Pay Mode</th>
+                                            <th class="p-4 text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="report-output-body" class="divide-y divide-gray-200 font-medium text-gray-700 bg-white">
+                                        <tr>
+                                            <td colspan="9" class="p-8 text-center text-gray-400 italic">Add a Chit Group and log ledger rows to populate analytics automatically.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div id="secondary-report-section" class="space-y-4">
+                            <div class="mb-2 mt-8">
+                                <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide bg-emerald-50/50 p-3 rounded border border-emerald-100 flex items-center">
+                                    <i class="fa-solid fa-gavel mr-2 text-emerald-500"></i> Auction & Bid Discount Payout Details (Based on active filters)
+                                </h3>
+                            </div>
+                            <div class="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+                                <div class="overflow-x-auto">
+                                    <table id="report-auction-table-node" class="w-full text-left border-collapse text-sm min-w-[800px]">
+                                        <thead class="bg-slate-700 font-semibold text-slate-200 border-b border-slate-600">
+                                            <tr class="text-xs uppercase" id="report-auction-table-head-row">
+                                                <th class="p-4 w-12">Sl. No</th>
+                                                <th class="p-4">Group & Value</th>
+                                                <th class="p-4">Month</th>
+                                                <th class="p-4">Winner</th>
+                                                <th class="p-4">Bid Dis</th>
+                                                <th class="p-4">Paid</th>
+                                                <th class="p-4">Payout Dates</th>
+                                                <th class="p-4">Payout Mode</th>
+                                                <th class="p-4 text-center">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="report-auction-output-body" class="divide-y divide-gray-200 font-medium text-gray-700 bg-white">
+                                            <tr>
+                                                <td colspan="9" class="p-8 text-center text-gray-400 italic">No auction records found for the current filters.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- TIMELINE BREAKDOWN MODAL -->
+    <div id="breakdownModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-4xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
+                <div>
+                    <h3 id="modal-title" class="text-lg font-bold">Group Timeline Breakdown</h3>
+                    <p class="text-xs text-slate-400">Pre-entered custom parameter log matching active months</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="btn-toggle-edit-timeline" onclick="toggleTimelineEditMode()" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded transition cursor-pointer"><i class="fa-solid fa-pen-to-square mr-1"></i> Edit Timeline</button>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-white text-lg p-1 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 space-y-4">
+                <input type="hidden" id="modal-current-group-code">
+                
+                <div class="bg-amber-50/70 border border-amber-200 p-3 rounded-xl flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] font-bold text-amber-700 uppercase tracking-wider block"><i class="fa-solid fa-vault mr-1"></i> Total Pool Chit Value</span>
+                        <span id="modal-chit-val-text" class="text-base font-black text-slate-900">Rs. 0</span>
+                    </div>
+                    <div id="modal-chit-val-edit-container" class="hidden">
+                        <label class="block text-[10px] font-bold text-amber-800 uppercase mb-0.5">Edit Total Chit Value (Rs.)</label>
+                        <input type="number" id="edit-group-chit-value" class="text-sm font-bold border border-amber-300 rounded p-1.5 bg-white w-44 focus:ring-1 focus:ring-amber-500 focus:outline-none" placeholder="Chit Value">
+                    </div>
+                </div>
+
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-400 font-bold text-xs uppercase border-b border-gray-200">
+                            <th class="py-3 px-4">Month Reference (Date Picker)</th>
+                            <th class="py-3 px-4">Regular Subscription (Rs.)</th>
+                            <th class="py-3 px-4">Sub. After Auction Lifting (Rs.)</th>
+                            <th class="py-3 px-4">Auction Bid Discount (Rs.)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modal-table-body" class="divide-y divide-gray-100 font-medium text-gray-700"></tbody>
+                </table>
+            </div>
+            <div class="bg-gray-50 p-4 border-t border-gray-100 flex justify-between items-center">
+                <span id="timeline-edit-status" class="text-xs text-emerald-600 font-bold hidden">Edit mode active. Modify Chit Value or Month Reference (remaining months shift automatically) and click Save.</span>
+                <div class="flex gap-2">
+                    <button id="btn-save-timeline" onclick="saveTimelineChanges()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-lg cursor-pointer transition hidden"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Changes</button>
+                    <button onclick="closeModal()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-lg cursor-pointer transition">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MANAGE MEMBERS MODAL -->
+    <div id="membersModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="bg-slate-900 text-white p-5 flex justify-between items-center">
+                <div>
+                    <h3 id="members-modal-title" class="text-lg font-bold">Manage Group Members</h3>
+                    <p id="members-modal-subtitle" class="text-xs text-slate-400">Add or remove members for this group</p>
+                </div>
+                <button onclick="closeMembersModal()" class="text-slate-400 hover:text-white text-lg p-1 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-6 flex flex-col gap-4">
+                <form id="addMemberForm" onsubmit="addMemberSubmit(event)" class="flex flex-col gap-2 mb-2">
+                    <input type="hidden" id="mm-group-code">
+                    <div class="flex gap-2">
+                        <input type="tel" id="mm-new-phone" list="phone-list" oninput="handlePhoneSelect()" placeholder="10-Digit Phone No." maxlength="10" pattern="[0-9]{10}" title="Phone number must be exactly 10 digits" required class="flex-1 text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none">
+                        <datalist id="phone-list"></datalist>
+                        
+                        <input type="text" id="mm-new-name" placeholder="Member Name..." required class="flex-1 text-sm border border-gray-300 rounded-lg p-2 focus:ring-1 focus:ring-amber-500 focus:outline-none">
+                        
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition">Add</button>
+                    </div>
+                </form>
+                
+                <div class="border border-gray-200 rounded-lg overflow-hidden flex-1 overflow-y-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead class="bg-gray-50 text-gray-500 font-bold text-xs uppercase border-b border-gray-200">
+                            <tr>
+                                <th class="py-2 px-4">System ID</th>
+                                <th class="py-2 px-4">Member Name</th>
+                                <th class="py-2 px-4">Phone Number</th>
+                                <th class="py-2 px-4 text-center w-16">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="members-modal-body" class="divide-y divide-gray-100 font-medium text-gray-700"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="bg-gray-50 p-4 border-t border-gray-100 flex justify-end">
+                <button onclick="closeMembersModal()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-lg cursor-pointer transition">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .animate-spin-slow {
+            animation: spin 8s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+
+    <script>
+        // --- FIREBASE CLOUD DATABASE CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCul-ZsKPkiopptgDxp7D3dLBDvgkk6NZs",
+            authDomain: "hbp-chits-63a1b.firebaseapp.com",
+            projectId: "hbp-chits-63a1b",
+            storageBucket: "hbp-chits-63a1b.firebasestorage.app",
+            messagingSenderId: "597995590228",
+            appId: "1:597995590228:web:da6611cd129e5b34c793c1",
+            measurementId: "G-38QJD5FW1T"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let globalGroupRegistry = {};
+        let paymentLedger = [];
+        let historicalAuctions = []; 
+        window.currentReportStatementRows = [];
+        window.currentReportAuctionRows = [];
+        window.currentReportGlanceRows = [];
+        window.currentReportGlanceTotal = null;
+        window.currentReportStatementTotalPaid = 0;
+        window.currentReportAuctionTotalPaid = 0;
+
+        // --- CLOUD FIRESTORE DATABASE SYNC LOGIC ---
+        async function saveData() {
+            try {
+                await db.collection("hbp_chits").doc("main_database").set({
+                    groups: globalGroupRegistry,
+                    payments: paymentLedger,
+                    auctions: historicalAuctions,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                console.log("Data successfully synced to Firebase Firestore Cloud.");
+            } catch (error) {
+                console.error("Error writing to Firestore!", error);
+                alert("Database Error: Could not save data to Firebase. Please check your internet connection or Firestore rules.");
+            }
+        }
+
+        async function loadData() {
+            try {
+                const docSnap = await db.collection("hbp_chits").doc("main_database").get();
+                if (docSnap.exists) {
+                    const data = docSnap.data();
+                    globalGroupRegistry = data.groups || {};
+                    paymentLedger = data.payments || [];
+                    historicalAuctions = data.auctions || [];
+                    console.log("Data successfully fetched from Firebase Firestore Cloud.");
+                } else {
+                    globalGroupRegistry = {};
+                    paymentLedger = [];
+                    historicalAuctions = [];
+                }
+            } catch (error) {
+                console.error("Error reading from Firestore!", error);
+                alert("Database Error: Could not fetch data from Firebase Cloud.");
+            }
+        }
+
+        // --- AUTHENTICATION & INIT LOGIC ---
+        async function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('login-user').value;
+            const p = document.getElementById('login-pass').value;
+
+            if (u === 'admin' && p === 'admin') {
+                sessionStorage.setItem('isLoggedIn', 'true');
+                document.getElementById('login-screen').classList.add('hidden');
+                await initApp();
+            } else {
+                alert('Invalid Credentials! Please try again.');
+            }
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem('isLoggedIn');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('loginForm').reset();
+            
+            globalGroupRegistry = {};
+            paymentLedger = [];
+            historicalAuctions = [];
+        }
+
+        async function initApp() {
+            document.getElementById('loading-screen').classList.remove('hidden');
+            
+            await loadData();
+            
+            syncGlobalFormDropdowns();
+            renderActiveGroups();
+            renderLedgerTables();
+            calculateDashboardMetrics();
+            switchTab('dashboard');
+            
+            document.getElementById('loading-screen').classList.add('hidden');
+        }
+
+        window.onload = async function() {
+            if (sessionStorage.getItem('isLoggedIn') === 'true') {
+                document.getElementById('login-screen').classList.add('hidden');
+                await initApp();
+            }
+        };
+
+        // --- CORE APPLICATION LOGIC ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-view').forEach(view => view.classList.add('hidden'));
+            
+            document.querySelectorAll('#sidebar-nav button').forEach(btn => {
+                btn.classList.remove('bg-slate-800', 'text-amber-400', 'font-medium');
+                btn.classList.add('text-slate-300');
+            });
+            
+            document.getElementById('view-' + tabId).classList.remove('hidden');
+            
+            const activeBtn = document.getElementById('tab-' + tabId);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-slate-300');
+                activeBtn.classList.add('bg-slate-800', 'text-amber-400', 'font-medium');
+            }
+            
+            const titles = {
+                dashboard: 'Dashboard Overview',
+                groups: 'Chit Pools Registry',
+                payments: 'Collections Management Ledger',
+                auctions: 'Auction Settlement Desk',
+                reports: "HBP CHIT'S Audit & Management Reports Desk"
+            };
+            document.getElementById('page-title').innerText = titles[tabId] || 'Chit Manager';
+            
+            if (tabId === 'reports') {
+                toggleReportTypeView();
+                compileStatusReport();
+            }
+        }
+
+        function getExpectedBaseline(code, monthRef, memberName) {
+            const g = globalGroupRegistry[code];
+            if (!g) return 0;
+            
+            const wonPrior = historicalAuctions.some(a => 
+                a.groupCode === code && 
+                parseInt(a.monthRef) < parseInt(monthRef) && 
+                a.winnerName === memberName
+            );
+            return wonPrior ? g.months[monthRef].lifted : g.months[monthRef].regular;
+        }
+
+        function recalculateMemberDues(code, memberName) {
+            if (!globalGroupRegistry[code]) return;
+            
+            const memberPayments = paymentLedger.filter(p => p.groupCode === code && p.memberName === memberName);
+            const uniqueMonths = [...new Set(memberPayments.map(p => p.monthRef))];
+            
+            uniqueMonths.forEach(month => {
+                const expectedBaseline = getExpectedBaseline(code, month, memberName);
+                
+                let totalPaid = 0;
+                memberPayments.forEach(p => {
+                    if (String(p.monthRef) === String(month)) {
+                        totalPaid += parseFloat(p.amountPaid) || 0;
+                    }
+                });
+                
+                const newDue = Math.max(0, expectedBaseline - totalPaid);
+                
+                memberPayments.forEach(p => {
+                    if (String(p.monthRef) === String(month)) {
+                        p.dueAmount = newDue;
+                        if (newDue <= 0) {
+                            p.statusFlag = "Paid";
+                        } else if (p.statusFlag === "Paid") {
+                            p.statusFlag = "Pending";
+                        }
+                    }
+                });
+            });
+        }
+
+        function generateBulkMonthInputs() {
+            const tenure = parseInt(document.getElementById('g-months').value) || 0;
+            const startMonthVal = document.getElementById('g-start-month').value;
+            const container = document.getElementById('bulk-months-container');
+            const list = document.getElementById('bulk-inputs-list');
+            
+            list.innerHTML = '';
+            if (tenure <= 0 || !startMonthVal) {
+                container.classList.add('hidden');
+                return;
+            }
+            
+            let [sYear, sMonth] = startMonthVal.split('-');
+            let startDate = new Date(sYear, parseInt(sMonth) - 1, 1);
+            
+            container.classList.remove('hidden');
+            for (let i = 1; i <= tenure; i++) {
+                const currentMonthDate = new Date(startDate.getFullYear(), startDate.getMonth() + (i - 1), 1);
+                const monthYearStr = `${currentMonthDate.getFullYear()}-${String(currentMonthDate.getMonth() + 1).padStart(2, '0')}`;
+                const monthLabel = currentMonthDate.toLocaleString('default', { month: 'short', year: 'numeric' });
+                
+                const row = document.createElement('div');
+                row.className = "bg-gray-50 p-3 rounded-lg border border-gray-200 grid grid-cols-3 gap-2";
+                row.innerHTML = `
+                    <div class="col-span-3 font-bold text-xs text-slate-700 pb-1 border-b border-gray-200/60 mb-1 flex justify-between items-center">
+                        <span class="text-gray-900">${monthLabel}</span>
+                        <input type="hidden" id="bulk-month-val-${i}" value="${monthYearStr}">
+                        <span class="text-amber-500 font-bold uppercase tracking-wider text-[10px]">Installment ${i}</span>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 mb-0.5">Regular Sub (Rs.)</label>
+                        <input type="number" id="bulk-reg-${i}" placeholder="25000" required class="w-full text-xs border border-gray-300 rounded p-1.5 bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-amber-600 mb-0.5">Lifted Sub (Rs.)</label>
+                        <input type="number" id="bulk-lift-${i}" placeholder="21250" required class="w-full text-xs border border-gray-300 rounded p-1.5 bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-rose-500 mb-0.5">Bid Discount (Rs.)</label>
+                        <input type="number" id="bulk-disc-${i}" placeholder="15000" required class="w-full text-xs border border-gray-300 rounded p-1.5 bg-white">
+                    </div>
+                `;
+                list.appendChild(row);
+            }
+        }
+
+        async function createNewGroup(e) {
+            e.preventDefault();
+            const code = document.getElementById('g-code').value.trim().toUpperCase();
+            const value = parseFloat(document.getElementById('g-value').value);
+            const tenure = parseInt(document.getElementById('g-months').value);
+            const startMonthStr = document.getElementById('g-start-month').value;
+            const dueDay = parseInt(document.getElementById('g-due-day').value);
+            const totalMembersLimit = parseInt(document.getElementById('g-members').value);
+            
+            if (globalGroupRegistry[code]) {
+                alert("Error: A group with this ID code already exists.");
+                return;
+            }
+
+            const monthsData = {};
+            let [sYear, sMonth] = startMonthStr.split('-');
+            let startDate = new Date(sYear, parseInt(sMonth) - 1, 1);
+
+            for (let i = 1; i <= tenure; i++) {
+                const currentMonthDate = new Date(startDate.getFullYear(), startDate.getMonth() + (i - 1), 1);
+                const monthLabel = currentMonthDate.toLocaleString('default', { month: 'short', year: 'numeric' });
+                const monthValInput = document.getElementById(`bulk-month-val-${i}`);
+                const monthYearStr = monthValInput ? monthValInput.value : `${currentMonthDate.getFullYear()}-${String(currentMonthDate.getMonth() + 1).padStart(2, '0')}`;
+                
+                monthsData[i] = {
+                    label: monthLabel,
+                    monthVal: monthYearStr,
+                    regular: parseFloat(document.getElementById(`bulk-reg-${i}`).value) || 0,
+                    lifted: parseFloat(document.getElementById(`bulk-lift-${i}`).value) || 0,
+                    discount: parseFloat(document.getElementById(`bulk-disc-${i}`).value) || 0
+                };
+            }
+
+            globalGroupRegistry[code] = {
+                code, value, tenure, dueDay, startMonth: startMonthStr,
+                totalMembersLimit: totalMembersLimit,
+                members: [], 
+                months: monthsData,
+                createdAt: new Date().toISOString().split('T')[0]
+            };
+
+            document.getElementById('groupForm').reset();
+            document.getElementById('bulk-months-container').classList.add('hidden');
+            
+            await saveData();
+
+            syncGlobalFormDropdowns();
+            renderActiveGroups();
+            calculateDashboardMetrics();
+            alert(`Pool ${code} configured and registered successfully starting from ${monthsData[1].label}. You can now add members to this group.`);
+        }
+
+        function isGroupClosed(code) {
+            const g = globalGroupRegistry[code];
+            if (!g) return false;
+            const allAuctionsDone = Object.keys(g.months).every(m => 
+                historicalAuctions.some(a => a.groupCode === code && String(a.monthRef) === String(m))
+            );
+            if (!allAuctionsDone) return false;
+
+            let hasPendingDues = false;
+            g.members.forEach(mObj => {
+                const mName = mObj.name || mObj;
+                Object.keys(g.months).forEach(mStr => {
+                    const expected = getExpectedBaseline(code, mStr, mName);
+                    let paid = 0;
+                    paymentLedger.forEach(p => {
+                        if (p.groupCode === code && p.memberName === mName && String(p.monthRef) === String(mStr)) {
+                            paid += parseFloat(p.amountPaid) || 0;
+                        }
+                    });
+                    if (paid < expected) {
+                        hasPendingDues = true;
+                    }
+                });
+            });
+            return !hasPendingDues;
+        }
+
+        function renderActiveGroups() {
+            const container = document.getElementById('groups-container');
+            const closedContainer = document.getElementById('closed-groups-container');
+            container.innerHTML = '';
+            closedContainer.innerHTML = '';
+            
+            const keys = Object.keys(globalGroupRegistry);
+            if (keys.length === 0) {
+                container.innerHTML = `<p class="text-sm italic text-gray-400 col-span-2">No configured pools streaming live. Go ahead and add your first group configuration above!</p>`;
+                closedContainer.innerHTML = `<p class="text-sm italic text-gray-400 col-span-2">No closed pools found.</p>`;
+                return;
+            }
+
+            let activeCount = 0;
+            let closedCount = 0;
+
+            keys.forEach(key => {
+                const g = globalGroupRegistry[key];
+                const closed = isGroupClosed(key);
+
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-3 relative overflow-hidden flex flex-col justify-between";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-0.5 rounded">${g.code}</span>
+                                <h3 class="font-bold text-gray-900 text-lg mt-1">Rs. ${g.value.toLocaleString('en-IN')}</h3>
+                            </div>
+                            <button onclick="launchTimelineBreakdownModal('${g.code}')" class="text-slate-400 hover:text-amber-500 text-sm transition p-1" title="Timeline Info"><i class="fa-solid fa-calendar-days text-base"></i></button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 pt-2 text-xs text-gray-500 font-medium">
+                            <div><i class="fa-solid fa-clock mr-1 text-slate-400"></i> Tenure: <b>${g.tenure} M</b></div>
+                            <div><i class="fa-solid fa-play mr-1 text-emerald-500"></i> Starts: <b>${g.months[1].label}</b></div>
+                            <div class="col-span-2"><i class="fa-solid fa-calendar-check mr-1 text-slate-400"></i> Fixed Due: <b>Day ${g.dueDay} Monthly</b></div>
+                        </div>
+                        <div class="flex gap-2 mt-3">
+                            <button onclick="openManageMembersModal('${g.code}')" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold py-1.5 rounded transition shadow-sm"><i class="fa-solid fa-users-gear"></i> Mbrs</button>
+                            <button onclick="printRoster('${g.code}')" class="w-1/3 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold py-1.5 rounded transition shadow-sm"><i class="fa-solid fa-address-book"></i> Roster</button>
+                            <button onclick="printTimeline('${g.code}')" class="w-1/3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-bold py-1.5 rounded transition shadow-sm"><i class="fa-solid fa-clock"></i> Timeline</button>
+                        </div>
+                    </div>
+                    <div class="border-t border-gray-100 pt-2.5 flex items-center justify-between">
+                        <span class="text-[11px] text-gray-500 font-bold">Members: ${g.members.length} / ${g.totalMembersLimit} ${closed ? '<span class="ml-2 text-emerald-600 font-bold">(Closed)</span>' : ''}</span>
+                        <button onclick="purgeEntireGroupPool('${g.code}')" class="text-rose-500 hover:text-rose-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer"><i class="fa-solid fa-trash-can"></i> Purge</button>
+                    </div>
+                `;
+
+                if (closed) {
+                    closedContainer.appendChild(card);
+                    closedCount++;
+                } else {
+                    container.appendChild(card);
+                    activeCount++;
+                }
+            });
+
+            if (activeCount === 0) {
+                container.innerHTML = `<p class="text-sm italic text-gray-400 col-span-2">No active live groups found.</p>`;
+            }
+            if (closedCount === 0) {
+                closedContainer.innerHTML = `<p class="text-sm italic text-gray-400 col-span-2">No closed/inactive live groups found.</p>`;
+            }
+        }
+
+        function openManageMembersModal(code) {
+            const g = globalGroupRegistry[code];
+            if (!g) return;
+            
+            document.getElementById('mm-group-code').value = code;
+            document.getElementById('members-modal-title').innerText = `Manage Members: Pool ${code}`;
+            
+            const phoneList = document.getElementById('phone-list');
+            phoneList.innerHTML = '';
+            window.tempAllMembers = {};
+            
+            Object.values(globalGroupRegistry).forEach(grp => {
+                grp.members.forEach(m => {
+                    if (typeof m === 'object' && m.phone) {
+                        window.tempAllMembers[m.phone] = m;
+                        phoneList.innerHTML += `<option value="${m.phone}">${m.name} (${m.id})</option>`;
+                    }
+                });
+            });
+
+            renderMembersList(code);
+            document.getElementById('membersModal').classList.remove('hidden');
+        }
+
+        function closeMembersModal() {
+            document.getElementById('membersModal').classList.add('hidden');
+            document.getElementById('mm-new-name').value = '';
+            document.getElementById('mm-new-phone').value = '';
+        }
+
+        function handlePhoneSelect() {
+            const phone = document.getElementById('mm-new-phone').value.trim();
+            if (window.tempAllMembers && window.tempAllMembers[phone]) {
+                document.getElementById('mm-new-name').value = window.tempAllMembers[phone].name;
+            }
+        }
+
+        function renderMembersList(code) {
+            const g = globalGroupRegistry[code];
+            const tbody = document.getElementById('members-modal-body');
+            const subtitle = document.getElementById('members-modal-subtitle');
+            
+            tbody.innerHTML = '';
+            subtitle.innerText = `Slots filled: ${g.members.length} out of limit ${g.totalMembersLimit}`;
+            
+            if(g.members.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-gray-400 italic text-xs">No members assigned yet.</td></tr>`;
+            } else {
+                g.members.forEach((m, index) => {
+                    const mName = m.name || m;
+                    const mPhone = m.phone || 'N/A';
+                    const mId = m.id || 'N/A';
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="py-2 px-4 text-slate-500 font-mono text-xs">${mId}</td>
+                        <td class="py-2 px-4 text-slate-800 font-bold">${mName}</td>
+                        <td class="py-2 px-4 text-slate-600 text-xs">${mPhone}</td>
+                        <td class="py-2 px-4 text-center">
+                            <button onclick="removeMember('${code}', ${index})" class="text-rose-500 hover:text-rose-700 p-1 transition" title="Remove Member"><i class="fa-solid fa-trash-can"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+        }
+
+        async function addMemberSubmit(e) {
+            e.preventDefault();
+            const code = document.getElementById('mm-group-code').value;
+            const newName = document.getElementById('mm-new-name').value.trim();
+            const newPhone = document.getElementById('mm-new-phone').value.trim();
+            const g = globalGroupRegistry[code];
+            
+            if(!g || !newName || !newPhone) return;
+            
+            if (!/^\d{10}$/.test(newPhone)) {
+                alert("Phone number must be exactly 10 digits.");
+                return;
+            }
+            
+            if(g.members.length >= g.totalMembersLimit) {
+                alert(`Cannot add member. The limit of ${g.totalMembersLimit} has been reached for this group.`);
+                return;
+            }
+            
+            if(g.members.some(m => (m.name || m) === newName || m.phone === newPhone)) {
+                alert("This member or phone number is already registered in this group.");
+                return;
+            }
+            
+            let newId = `ID-${Date.now().toString().slice(-6)}`;
+            if (window.tempAllMembers && window.tempAllMembers[newPhone]) {
+                newId = window.tempAllMembers[newPhone].id;
+            }
+            
+            g.members.push({
+                id: newId,
+                name: newName,
+                phone: newPhone
+            });
+            
+            document.getElementById('mm-new-name').value = '';
+            document.getElementById('mm-new-phone').value = '';
+            
+            await saveData();
+
+            renderMembersList(code);
+            renderActiveGroups();
+            syncGlobalFormDropdowns(); 
+        }
+
+        async function removeMember(code, index) {
+            const g = globalGroupRegistry[code];
+            if(!g) return;
+            const memberObj = g.members[index];
+            const memberName = memberObj.name || memberObj;
+            
+            const hasPayments = paymentLedger.some(p => p.groupCode === code && p.memberName === memberName);
+            const wonAuction = historicalAuctions.some(a => a.groupCode === code && a.winnerName === memberName);
+            
+            if(hasPayments || wonAuction) {
+                alert(`Cannot remove ${memberName}. They have active payment or auction records logged in the system for this pool.`);
+                return;
+            }
+            
+            if(confirm(`Are you sure you want to remove ${memberName} from this group?`)) {
+                g.members.splice(index, 1);
+                await saveData();
+                renderMembersList(code);
+                renderActiveGroups();
+                syncGlobalFormDropdowns();
+            }
+        }
+
+        function printRoster(code) {
+            const g = globalGroupRegistry[code];
+            if (!g) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            
+            doc.setFillColor(30, 58, 138);
+            doc.rect(0, 0, pageWidth, 52, 'F');
+            doc.setFillColor(245, 158, 11);
+            doc.rect(0, 52, pageWidth, 2, 'F');
+            
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(16);
+            doc.setTextColor(251, 191, 36);
+            doc.text("HBP CHIT'S FINANCIAL SERVICES", pageWidth / 2, 10, { align: 'center' });
+
+            doc.setFont("helvetica", "bolditalic");
+            doc.setFontSize(12);
+            doc.setTextColor(253, 230, 138);
+            doc.text("Your Trust, Our Commitment", pageWidth / 2, 16, { align: 'center' });
+
+            doc.setFont("helvetica", "italic");
+            doc.setFontSize(12);
+            doc.setTextColor(224, 231, 255);
+            doc.text("Save Together… Grow Together… Succeed Together…", pageWidth / 2, 21, { align: 'center' });
+            
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(11);
+            doc.setTextColor(255, 255, 255);
+            doc.text("Kukatpally, Hyderabad - 500072 & Ph: 9666105665", pageWidth / 2, 28, { align: 'center' });
+            
+            doc.setFontSize(10);
+            doc.setTextColor(255, 255, 255);
+            doc.text(`CHIT GROUP: ${g.code} | Value: Rs. ${g.value.toLocaleString('en-IN')}`, pageWidth / 2, 36, { align: 'center' });
+            
+            doc.setFontSize(10);
+            doc.setTextColor(191, 219, 254);
+            doc.text(`REGISTERED MEMBERS ROSTER | Total Limit: ${g.totalMembersLimit} Members`, pageWidth / 2, 44, { align: 'center' });
+            
+            const memberBody = g.members.length > 0 ? g.members.map((m, i) => [
+                i + 1, 
+                m.id || 'SYS-N/A', 
+                m.name || m, 
+                m.phone || 'N/A'
+            ]) : [['-', '-', 'No members added yet', '-']];
+            
+            doc.autoTable({
+                startY: 58,
+                head: [['Sl. No.', 'System ID', 'Member Name', 'Phone Number']],
+                body: memberBody,
+                headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [239, 246, 255] },
+                styles: { fontSize: 9, cellPadding: 3.5, font: 'helvetica' }
+            });
+
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(148, 163, 184);
+                doc.text(`Page ${i} of ${pageCount} - HBP CHIT'S Financial Services`, pageWidth / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
+            }
+            
+            doc.save(`Group_${g.code}_Roster.pdf`);
+        }
+
+        function printTimeline(code) {
+            const g = globalGroupRegistry[code];
+            if (!g) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            
+            doc.setFillColor(5, 150, 105);
+            doc.rect(0, 0, pageWidth, 52, 'F');
+            doc.setFillColor(245, 158, 11);
+            doc.rect(0, 52, pageWidth, 2, 'F');
+            
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(16);
+            doc.setTextColor(251, 191, 36);
+            doc.text("HBP CHIT'S FINANCIAL SERVICES", pageWidth / 2, 10, { align: 'center' });
+
+            doc.setFont("helvetica", "bolditalic");
+            doc.setFontSize(12);
+            doc.setTextColor(253, 230, 138);
+            doc.text("Your Trust, Our Commitment", pageWidth / 2, 16, { align: 'center' });
+
+            doc.setFont("helvetica", "italic");
+            doc.setFontSize(12);
+            doc.setTextColor(236, 253, 245);
+            doc.text("Save Together… Grow Together… Succeed Together…", pageWidth / 2, 21, { align: 'center' });
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(11);
+            doc.setTextColor(255, 255, 255);
+            doc.text("Kukatpally, Hyderabad - 500072 & Ph: 9666105665", pageWidth / 2, 28, { align: 'center' });
+            
+            doc.setFontSize(10);
+            doc.setTextColor(255, 255, 255);
+            doc.text(`CHIT GROUP: ${g.code} | Value: Rs. ${g.value.toLocaleString('en-IN')}`, pageWidth / 2, 36, { align: 'center' });
+            
+            doc.setFontSize(10);
+            doc.setTextColor(167, 243, 208);
+            doc.text(`TIMELINE BREAKDOWN | Tenure: ${g.tenure} Months | Fixed Due: Day ${g.dueDay} Monthly`, pageWidth / 2, 44, { align: 'center' });
+            
+            const timelineBody = Object.keys(g.months).map((m, idx) => {
+                const data = g.months[m];
+                return [
+                    idx + 1,
+                    `${data.label} (Inst. ${m})`,
+                    `Rs. ${data.regular.toLocaleString('en-IN')}`,
+                    `Rs. ${data.lifted.toLocaleString('en-IN')}`,
+                    `Rs. ${data.discount.toLocaleString('en-IN')}`
+                ];
+            });
+
+            doc.autoTable({
+                startY: 58,
+                head: [['Sl. No.', 'Month Reference', 'Regular Subscription', 'Sub. After Auction Lifting', 'Auction Bid Discount']],
+                body: timelineBody,
+                headStyles: { fillColor: [5, 150, 105], textColor: 255, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [236, 253, 245] },
+                styles: { fontSize: 9, cellPadding: 3.5, font: 'helvetica' },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 16 }
+                }
+            });
+
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(148, 163, 184);
+                doc.text(`Page ${i} of ${pageCount} - HBP CHIT'S Financial Services`, pageWidth / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
+            }
+            
+            doc.save(`Group_${g.code}_Timeline.pdf`);
+        }
+
+        function launchTimelineBreakdownModal(code) {
+            const g = globalGroupRegistry[code];
+            if (!g) return;
+
+            document.getElementById('modal-title').innerText = `Timeline Breakdown Parameters: Pool ${g.code}`;
+            document.getElementById('modal-current-group-code').value = code;
+            document.getElementById('modal-chit-val-text').innerText = `Rs. ${g.value.toLocaleString('en-IN')}`;
+            document.getElementById('edit-group-chit-value').value = g.value;
+            
+            window.isTimelineEditing = false;
+            document.getElementById('btn-toggle-edit-timeline').innerHTML = '<i class="fa-solid fa-pen-to-square mr-1"></i> Edit Timeline';
+            document.getElementById('btn-save-timeline').classList.add('hidden');
+            document.getElementById('timeline-edit-status').classList.add('hidden');
+            document.getElementById('modal-chit-val-edit-container').classList.add('hidden');
+
+            renderTimelineModalRows(code, false);
+            document.getElementById('breakdownModal').classList.remove('hidden');
+        }
+
+        function renderTimelineModalRows(code, isEdit) {
+            const g = globalGroupRegistry[code];
+            const tbody = document.getElementById('modal-table-body');
+            tbody.innerHTML = '';
+
+            Object.keys(g.months).forEach(m => {
+                const data = g.months[m];
+                const row = document.createElement('tr');
+                row.className = "border-b border-gray-100 hover:bg-gray-50/80 transition";
+                
+                if (isEdit) {
+                    let defaultMonthVal = data.monthVal || '';
+                    if (!defaultMonthVal) {
+                        defaultMonthVal = new Date().toISOString().slice(0, 7);
+                    }
+                    row.innerHTML = `
+                        <td class="py-3 px-4">
+                            <input type="month" id="edit-month-${m}" value="${defaultMonthVal}" onchange="handleTimelineMonthChange(${m}, ${g.tenure})" class="border border-amber-300 bg-amber-50/40 rounded p-1.5 text-xs font-bold text-slate-900 w-full focus:ring-1 focus:ring-amber-500 focus:outline-none">
+                            <span class="text-gray-400 text-[10px] block mt-0.5">(Inst. ${m})</span>
+                        </td>
+                        <td class="py-3 px-4"><input type="number" id="edit-reg-${m}" value="${data.regular}" class="border border-gray-300 rounded p-1.5 text-xs w-full"></td>
+                        <td class="py-3 px-4"><input type="number" id="edit-lift-${m}" value="${data.lifted}" class="border border-gray-300 rounded p-1.5 text-xs w-full text-amber-600"></td>
+                        <td class="py-3 px-4"><input type="number" id="edit-disc-${m}" value="${data.discount}" class="border border-gray-300 rounded p-1.5 text-xs w-full text-rose-600"></td>
+                    `;
+                } else {
+                    row.innerHTML = `
+                        <td class="py-3 px-4 font-bold text-slate-900">${data.label} <span class="text-gray-400 text-[10px] ml-1">(Inst. ${m})</span></td>
+                        <td class="py-3 px-4">Rs. ${data.regular.toLocaleString('en-IN')}</td>
+                        <td class="py-3 px-4 text-amber-600">Rs. ${data.lifted.toLocaleString('en-IN')}</td>
+                        <td class="py-3 px-4 text-rose-600">Rs. ${data.discount.toLocaleString('en-IN')}</td>
+                    `;
+                }
+                tbody.appendChild(row);
+            });
+        }
+
+        function handleTimelineMonthChange(changedIdx, tenure) {
+            const valInput = document.getElementById(`edit-month-${changedIdx}`);
+            if (!valInput) return;
+            let val = valInput.value;
+            if (!val) return;
+            let [yr, mo] = val.split('-');
+            let baseDate = new Date(parseInt(yr), parseInt(mo) - 1, 1);
+
+            for (let i = changedIdx + 1; i <= tenure; i++) {
+                let nextDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + (i - changedIdx), 1);
+                let nextVal = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
+                let nextInput = document.getElementById(`edit-month-${i}`);
+                if (nextInput) {
+                    nextInput.value = nextVal;
+                }
+            }
+        }
+
+        function toggleTimelineEditMode() {
+            const code = document.getElementById('modal-current-group-code').value;
+            window.isTimelineEditing = !window.isTimelineEditing;
+            
+            const toggleBtn = document.getElementById('btn-toggle-edit-timeline');
+            const saveBtn = document.getElementById('btn-save-timeline');
+            const statusMsg = document.getElementById('timeline-edit-status');
+            const chitEditContainer = document.getElementById('modal-chit-val-edit-container');
+
+            if (window.isTimelineEditing) {
+                toggleBtn.innerHTML = '<i class="fa-solid fa-xmark mr-1"></i> Cancel Edit';
+                toggleBtn.className = "bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold px-3 py-1.5 rounded transition cursor-pointer";
+                saveBtn.classList.remove('hidden');
+                statusMsg.classList.remove('hidden');
+                chitEditContainer.classList.remove('hidden');
+                renderTimelineModalRows(code, true);
+            } else {
+                toggleBtn.innerHTML = '<i class="fa-solid fa-pen-to-square mr-1"></i> Edit Timeline';
+                toggleBtn.className = "bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded transition cursor-pointer";
+                saveBtn.classList.add('hidden');
+                statusMsg.classList.add('hidden');
+                chitEditContainer.classList.add('hidden');
+                renderTimelineModalRows(code, false);
+            }
+        }
+
+        async function saveTimelineChanges() {
+            const code = document.getElementById('modal-current-group-code').value;
+            const g = globalGroupRegistry[code];
+            if (!g) return;
+
+            const newChitVal = parseFloat(document.getElementById('edit-group-chit-value').value);
+            if (!isNaN(newChitVal) && newChitVal > 0) {
+                g.value = newChitVal;
+            }
+
+            Object.keys(g.months).forEach(m => {
+                const monthDateInput = document.getElementById(`edit-month-${m}`);
+                const regInput = document.getElementById(`edit-reg-${m}`);
+                const liftInput = document.getElementById(`edit-lift-${m}`);
+                const discInput = document.getElementById(`edit-disc-${m}`);
+
+                if (monthDateInput && regInput && liftInput && discInput) {
+                    const mVal = monthDateInput.value;
+                    if (mVal) {
+                        let [yr, mo] = mVal.split('-');
+                        let dateObj = new Date(parseInt(yr), parseInt(mo) - 1, 1);
+                        g.months[m].monthVal = mVal;
+                        g.months[m].label = dateObj.toLocaleString('default', { month: 'short', year: 'numeric' });
+                        if (String(m) === '1') {
+                            g.startMonth = mVal;
+                        }
+                    }
+                    g.months[m].regular = parseFloat(regInput.value) || 0;
+                    g.months[m].lifted = parseFloat(liftInput.value) || 0;
+                    g.months[m].discount = parseFloat(discInput.value) || 0;
+                }
+            });
+
+            await saveData();
+            window.isTimelineEditing = false;
+            
+            document.getElementById('btn-toggle-edit-timeline').innerHTML = '<i class="fa-solid fa-pen-to-square mr-1"></i> Edit Timeline';
+            document.getElementById('btn-toggle-edit-timeline').className = "bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded transition cursor-pointer";
+            document.getElementById('btn-save-timeline').classList.add('hidden');
+            document.getElementById('timeline-edit-status').classList.add('hidden');
+            document.getElementById('modal-chit-val-edit-container').classList.add('hidden');
+
+            document.getElementById('modal-chit-val-text').innerText = `Rs. ${g.value.toLocaleString('en-IN')}`;
+            renderTimelineModalRows(code, false);
+            renderActiveGroups();
+            syncGlobalFormDropdowns();
+            calculateDashboardMetrics();
+            alert("Timeline parameters, chit value, and month references updated successfully.");
+        }
+
+        function closeModal() {
+            document.getElementById('breakdownModal').classList.add('hidden');
+        }
+
+        async function purgeEntireGroupPool(code) {
+            if (!confirm(`Are you sure you want to completely remove layout parameters for ${code}?`)) return;
+            
+            delete globalGroupRegistry[code];
+            paymentLedger = paymentLedger.filter(p => p.groupCode !== code);
+            historicalAuctions = historicalAuctions.filter(a => a.groupCode !== code);
+            
+            await saveData();
+
+            syncGlobalFormDropdowns();
+            renderActiveGroups();
+            renderLedgerTables();
+            calculateDashboardMetrics();
+        }
+
+        function syncGlobalFormDropdowns() {
+            const pGroup = document.getElementById('p-group-select');
+            const aGroup = document.getElementById('a-group-select');
+            const rGroup = document.getElementById('report-group-search');
+            
+            const selectedP = pGroup.value;
+            const selectedA = aGroup.value;
+            const selectedR = rGroup.value;
+
+            pGroup.innerHTML = '<option value="">-- Choose Active Pool --</option>';
+            aGroup.innerHTML = '<option value="">-- Choose Active Pool --</option>';
+            rGroup.innerHTML = '<option value="ALL">-- All Registered Groups --</option>';
+
+            Object.keys(globalGroupRegistry).forEach(code => {
+                const g = globalGroupRegistry[code];
+                const displayLabel = `${code} - Rs. ${g.value.toLocaleString('en-IN')}`;
+                
+                pGroup.innerHTML += `<option value="${code}">${displayLabel}</option>`;
+                aGroup.innerHTML += `<option value="${code}">${displayLabel}</option>`;
+                rGroup.innerHTML += `<option value="${code}">${displayLabel}</option>`;
+            });
+
+            pGroup.value = globalGroupRegistry[selectedP] ? selectedP : "";
+            aGroup.value = globalGroupRegistry[selectedA] ? selectedA : "";
+            rGroup.value = selectedR;
+
+            syncPaymentFormDynamics();
+            syncAuctionFormDropdowns();
+            syncReportFiltersDropdowns();
+            syncPayoutDropdowns(); 
+        }
+
+        function syncPaymentFormDynamics() {
+            const code = document.getElementById('p-group-select').value;
+            const nameSelect = document.getElementById('p-name-select');
+            
+            nameSelect.innerHTML = '<option value="">-- Select Member --</option>';
+            document.getElementById('p-date').value = "";
+
+            if (!code || !globalGroupRegistry[code]) {
+                calculateLivePaymentDue();
+                return;
+            }
+
+            const g = globalGroupRegistry[code];
+            g.members.forEach(m => {
+                const mName = m.name || m;
+                nameSelect.innerHTML += `<option value="${mName}">${mName}</option>`;
+            });
+
+            calculateLivePaymentDue();
+        }
+
+        function calculateLivePaymentDue() {
+            const code = document.getElementById('p-group-select').value;
+            const member = document.getElementById('p-name-select').value;
+            const amountInput = document.getElementById('p-amount');
+            const amountPaid = parseFloat(amountInput.value) || 0;
+            const dueInput = document.getElementById('p-due-amount');
+            const dateInput = document.getElementById('p-date');
+            const statusInput = document.getElementById('p-status');
+
+            if (!code || !member || !globalGroupRegistry[code]) {
+                dueInput.value = "0";
+                dateInput.value = "";
+                amountInput.disabled = false;
+                amountInput.placeholder = "Enter lump sum";
+                statusInput.value = "";
+                return;
+            }
+
+            const g = globalGroupRegistry[code];
+            
+            let totalExpected = 0;
+            let totalPriorPaid = 0;
+
+            for (let i = 1; i <= g.tenure; i++) {
+                const monthStr = String(i);
+                const expectedBaseline = getExpectedBaseline(code, monthStr, member);
+                let priorPaid = 0;
+                paymentLedger.forEach(p => {
+                    if(p.groupCode === code && String(p.monthRef) === monthStr && p.memberName === member) {
+                        priorPaid += parseFloat(p.amountPaid) || 0;
+                    }
+                });
+                totalExpected += expectedBaseline;
+                totalPriorPaid += priorPaid;
+            }
+
+            let remainingBalance = totalExpected - totalPriorPaid - amountPaid;
+            dueInput.value = remainingBalance > 0 ? remainingBalance : "0";
+
+            if (totalPriorPaid >= totalExpected) {
+                dueInput.value = "All Dues Paid";
+                amountInput.value = "";
+                amountInput.disabled = true;
+                amountInput.placeholder = "Fully Paid";
+                statusInput.value = "Paid";
+                dateInput.value = "-";
+            } else {
+                amountInput.disabled = false;
+                amountInput.placeholder = `Total expected: ${totalExpected - totalPriorPaid}`;
+                statusInput.value = remainingBalance > 0 ? "Pending" : "Paid";
+                dateInput.value = "Auto-assigned";
+            }
+        }
+
+        async function processPaymentSubmission(e) {
+            e.preventDefault();
+            const code = document.getElementById('p-group-select').value;
+            const member = document.getElementById('p-name-select').value;
+            const amountInput = document.getElementById('p-amount');
+            const paid = parseFloat(amountInput.value) || 0;
+            const mode = document.getElementById('p-mode').value;
+            const paymentDate = document.getElementById('p-payment-date').value;
+
+            if (amountInput.disabled || paid <= 0) {
+                alert("Cannot process payment. The account is either fully paid or the amount is invalid.");
+                return;
+            }
+
+            const g = globalGroupRegistry[code];
+            let remainingPayment = paid;
+
+            for (let i = 1; i <= g.tenure; i++) {
+                if (remainingPayment <= 0) break;
+
+                const monthStr = String(i);
+                const expectedBaseline = getExpectedBaseline(code, monthStr, member);
+
+                let priorPaid = 0;
+                paymentLedger.forEach(p => {
+                    if(p.groupCode === code && String(p.monthRef) === monthStr && p.memberName === member) {
+                        priorPaid += parseFloat(p.amountPaid) || 0;
+                    }
+                });
+
+                let due = Math.max(0, expectedBaseline - priorPaid);
+
+                if (due > 0) {
+                    let allocate = Math.min(due, remainingPayment);
+                    remainingPayment -= allocate;
+
+                    let [sYear, sMonth] = g.startMonth.split('-');
+                    const monthOffset = i - 1;
+                    const dateObj = new Date(sYear, parseInt(sMonth) - 1 + monthOffset, g.dueDay);
+                    const demandDueDate = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+
+                    const record = {
+                        id: Date.now() + Math.random().toString(36).substr(2, 6) + i,
+                        groupCode: code,
+                        memberName: member,
+                        monthRef: monthStr,
+                        amountPaid: allocate,
+                        dueAmount: due - allocate,
+                        paymentMode: mode,
+                        demandDueDate: demandDueDate,
+                        dateOfPayment: paymentDate,
+                        statusFlag: (due - allocate <= 0) ? "Paid" : "Pending"
+                    };
+
+                    paymentLedger.unshift(record);
+                }
+            }
+
+            if (remainingPayment > 0) {
+                const record = {
+                    id: Date.now() + Math.random().toString(36).substr(2, 6) + "ex",
+                    groupCode: code,
+                    memberName: member,
+                    monthRef: String(g.tenure),
+                    amountPaid: remainingPayment,
+                    dueAmount: 0,
+                    paymentMode: mode,
+                    demandDueDate: "Advance",
+                    dateOfPayment: paymentDate,
+                    statusFlag: "Paid"
+                };
+                paymentLedger.unshift(record);
+            }
+
+            recalculateMemberDues(code, member);
+            
+            document.getElementById('p-amount').value = "";
+            calculateLivePaymentDue();
+            
+            await saveData();
+
+            renderLedgerTables();
+            renderActiveGroups();
+            calculateDashboardMetrics();
+            alert("Collection receipt logged. Lump sum was automatically distributed to backlogs/current dues chronologically.");
+        }
+
+        function syncAuctionFormDropdowns() {
+            const code = document.getElementById('a-group-select').value;
+            const monthSelect = document.getElementById('a-month-select');
+            const bidderSelect = document.getElementById('a-bidder-select');
+            
+            monthSelect.innerHTML = '<option value="">-- Select Month --</option>';
+            bidderSelect.innerHTML = '<option value="">-- Select Bidder --</option>';
+            document.getElementById('a-bid-amount').value = "";
+
+            if (!code || !globalGroupRegistry[code]) return;
+
+            const g = globalGroupRegistry[code];
+            
+            g.members.forEach(m => {
+                const mName = m.name || m;
+                const alreadyWon = historicalAuctions.some(a => a.groupCode === code && a.winnerName === mName);
+                if (alreadyWon) {
+                    bidderSelect.innerHTML += `<option value="${mName}" disabled class="text-gray-400">${mName} [Already Won]</option>`;
+                } else {
+                    bidderSelect.innerHTML += `<option value="${mName}">${mName}</option>`;
+                }
+            });
+
+            Object.keys(g.months).forEach(m => {
+                const data = g.months[m];
+                const isClosed = historicalAuctions.some(a => a.groupCode === code && String(a.monthRef) === String(m));
+                if (isClosed) {
+                    monthSelect.innerHTML += `<option value="${m}" disabled class="text-rose-600 font-bold">${data.label} (Inst. ${m}) - [Closed]</option>`;
+                } else {
+                    monthSelect.innerHTML += `<option value="${m}">${data.label} (Inst. ${m})</option>`;
+                }
+            });
+        }
+
+        function autoPopulateBidAmount() {
+            const code = document.getElementById('a-group-select').value;
+            const month = document.getElementById('a-month-select').value;
+            const bidInput = document.getElementById('a-bid-amount');
+
+            if (!code || !month || !globalGroupRegistry[code]) {
+                bidInput.value = "";
+                return;
+            }
+            bidInput.value = globalGroupRegistry[code].months[month].discount;
+        }
+
+        async function logNewAuctionEntry(e) {
+            e.preventDefault();
+            const code = document.getElementById('a-group-select').value;
+            const month = document.getElementById('a-month-select').value;
+            const discount = parseFloat(document.getElementById('a-bid-amount').value) || 0;
+            const winner = document.getElementById('a-bidder-select').value;
+            const bidDate = document.getElementById('a-bid-date').value;
+
+            const exists = historicalAuctions.some(a => a.groupCode === code && String(a.monthRef) === String(month));
+            if (exists) {
+                alert("Error: An auction settlement record already stands locked for this Month block.");
+                return;
+            }
+
+            historicalAuctions.unshift({
+                id: Date.now(),
+                groupCode: code,
+                monthRef: month,
+                bidDiscountValue: discount,
+                winnerName: winner,
+                dateOfAuction: bidDate,
+                payouts: [] 
+            });
+
+            document.getElementById('auctionForm').reset();
+            document.getElementById('a-bid-amount').value = "";
+            
+            recalculateMemberDues(code, winner);
+
+            await saveData();
+
+            calculateLivePaymentDue();
+            syncPayoutDropdowns();
+            syncAuctionFormDropdowns();
+            renderLedgerTables();
+            renderActiveGroups();
+            calculateDashboardMetrics();
+            alert(`Auction entry finalized. Winner ${winner} logged successfully. You can now settle the Bid Discount amount.`);
+        }
+
+        function syncPayoutDropdowns() {
+            const select = document.getElementById('po-auction-select');
+            select.innerHTML = '<option value="">-- Select Pending Auction --</option>';
+            document.getElementById('po-lifted-amount').value = "";
+            document.getElementById('po-pay-amount').value = "";
+
+            const pendingAuctions = historicalAuctions.filter(a => {
+                const totalPaidSoFar = a.payouts ? a.payouts.reduce((sum, p) => sum + p.amount, 0) : 0;
+                return totalPaidSoFar < a.bidDiscountValue;
+            });
+            
+            pendingAuctions.forEach(a => {
+                const groupObj = globalGroupRegistry[a.groupCode];
+                const monthLabel = groupObj?.months[a.monthRef]?.label || `M-${a.monthRef}`;
+                const groupValStr = groupObj ? ` - Rs. ${groupObj.value.toLocaleString('en-IN')}` : '';
+                select.innerHTML += `<option value="${a.id}">${a.groupCode}${groupValStr} | ${monthLabel} - ${a.winnerName}</option>`;
+            });
+        }
+
+        function syncPayoutLiftedAmount() {
+            const auctionId = document.getElementById('po-auction-select').value;
+            const liftedInput = document.getElementById('po-lifted-amount');
+            const payInput = document.getElementById('po-pay-amount');
+
+            if (!auctionId) {
+                liftedInput.value = "";
+                payInput.max = "";
+                return;
+            }
+
+            const a = historicalAuctions.find(x => String(x.id) === String(auctionId));
+            if (a) {
+                const totalPaidSoFar = a.payouts ? a.payouts.reduce((sum, p) => sum + p.amount, 0) : 0;
+                const pendingBal = a.bidDiscountValue - totalPaidSoFar;
+                liftedInput.value = pendingBal;
+                payInput.max = pendingBal;
+                payInput.value = pendingBal;
+            }
+        }
+
+        async function logLiftedAmountPayout(e) {
+            e.preventDefault();
+            const auctionId = document.getElementById('po-auction-select').value;
+            const amountToPay = parseFloat(document.getElementById('po-pay-amount').value) || 0;
+            const date = document.getElementById('po-date').value;
+            const mode = document.getElementById('po-mode').value;
+
+            const auctionIdx = historicalAuctions.findIndex(x => String(x.id) === String(auctionId));
+            if (auctionIdx === -1) return;
+            
+            const a = historicalAuctions[auctionIdx];
+            if (!a.payouts) a.payouts = [];
+            
+            const totalPaidSoFar = a.payouts.reduce((sum, p) => sum + p.amount, 0);
+            const pendingBal = a.bidDiscountValue - totalPaidSoFar;
+
+            if (amountToPay > pendingBal) {
+                alert(`Cannot overpay. Pending balance is only Rs. ${pendingBal}.`);
+                return;
+            }
+
+            a.payouts.push({
+                amount: amountToPay,
+                date: date,
+                mode: mode,
+                timestamp: Date.now()
+            });
+
+            document.getElementById('payoutForm').reset();
+            
+            await saveData();
+
+            syncPayoutDropdowns();
+            renderLedgerTables();
+            renderActiveGroups();
+            calculateDashboardMetrics();
+            alert(`Settle payment logged against auction ID ${auctionId}.`);
+        }
+
+        async function purgeLedgerEntry(id) {
+            if(!confirm("Are you sure you want to completely destroy this entry record?")) return;
+            
+            const recordIdx = paymentLedger.findIndex(p => p.id === id);
+            if (recordIdx === -1) return;
+            
+            const record = paymentLedger[recordIdx];
+            paymentLedger = paymentLedger.filter(p => p.id !== id);
+            
+            recalculateMemberDues(record.groupCode, record.memberName);
+            
+            await saveData();
+
+            renderLedgerTables();
+            renderActiveGroups();
+            calculateDashboardMetrics();
+            syncPaymentFormDynamics(); 
+        }
+
+        async function purgeAuctionEntry(id) {
+            if(!confirm("Warning: Purging an auction will rollback bidder's lifted due expectations. Continue?")) return;
+            
+            const auction = historicalAuctions.find(a => a.id === id);
+            if(auction) {
+                historicalAuctions = historicalAuctions.filter(a => a.id !== id);
+                recalculateMemberDues(auction.groupCode, auction.winnerName);
+                
+                await saveData();
+
+                renderLedgerTables();
+                renderActiveGroups();
+                calculateDashboardMetrics();
+                syncPayoutDropdowns();
+                syncAuctionFormDropdowns();
+                syncPaymentFormDynamics(); 
+            }
+        }
+
+        function renderLedgerTables() {
+            const pBody = document.getElementById('payment-ledger-body');
+            pBody.innerHTML = '';
+            
+            if (paymentLedger.length === 0) {
+                pBody.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-gray-400 italic">No ledger transaction activities historically found yet. Start processing payments.</td></tr>`;
+            } else {
+                paymentLedger.forEach(p => {
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-slate-50 transition border-b border-gray-100/50";
+                    
+                    const groupStr = globalGroupRegistry[p.groupCode] ? `<span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded mr-1">${p.groupCode}</span>Rs. ${globalGroupRegistry[p.groupCode].value.toLocaleString('en-IN')}` : p.groupCode;
+                    const monthLabel = globalGroupRegistry[p.groupCode]?.months[p.monthRef]?.label || `M-${p.monthRef}`;
+                    
+                    const statusClass = p.statusFlag === "Paid" ? "text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded font-bold text-xs" : "text-rose-600 bg-rose-50 px-2 py-0.5 rounded font-bold text-xs";
+
+                    row.innerHTML = `
+                        <td class="p-4 font-bold text-gray-900">${p.memberName}</td>
+                        <td class="p-4">${groupStr}</td>
+                        <td class="p-4 text-emerald-600 font-semibold">Rs. ${p.amountPaid.toLocaleString('en-IN')}</td>
+                        <td class="p-4 text-rose-500 font-semibold">${p.dueAmount > 0 ? `Rs. ${p.dueAmount.toLocaleString('en-IN')}` : 'Cleared'}</td>
+                        <td class="p-4"><span class="text-xs text-gray-500">${monthLabel}</span></td>
+                        <td class="p-4"><span class="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded">${p.paymentMode}</span></td>
+                        <td class="p-4 text-xs text-gray-500">${p.dateOfPayment}</td>
+                        <td class="p-4"><span class="${statusClass}">${p.statusFlag}</span></td>
+                        <td class="p-4 text-center">
+                            <button onclick="purgeLedgerEntry('${p.id}')" class="text-rose-500 hover:text-rose-700 transition p-1" title="Purge Record"><i class="fa-solid fa-trash-can"></i></button>
+                        </td>
+                    `;
+                    pBody.appendChild(row);
+                });
+            }
+
+            const aBody = document.getElementById('auction-ledger-body');
+            aBody.innerHTML = '';
+
+            if (historicalAuctions.length === 0) {
+                aBody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-400 italic">No closed month auctions found yet.</td></tr>`;
+            } else {
+                historicalAuctions.forEach(a => {
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-slate-50 transition border-b border-gray-100/50";
+
+                    const groupObj = globalGroupRegistry[a.groupCode];
+                    const groupStr = groupObj ? `<span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded mr-1">${a.groupCode}</span>Rs. ${groupObj.value.toLocaleString('en-IN')}` : a.groupCode;
+                    const monthLabel = groupObj?.months[a.monthRef]?.label || `M-${a.monthRef}`;
+
+                    const totalPaid = a.payouts ? a.payouts.reduce((sum, p) => sum + p.amount, 0) : 0;
+                    const payoutsStr = a.payouts && a.payouts.length > 0 ? a.payouts.map(p => `${p.date}`).join('<br>') : '<span class="text-gray-400 italic">No payout logged</span>';
+                    const payoutModesStr = a.payouts && a.payouts.length > 0 ? a.payouts.map(p => `${p.mode}`).join('<br>') : '-';
+
+                    row.innerHTML = `
+                        <td class="p-4">${groupStr}</td>
+                        <td class="p-4"><span class="text-xs text-gray-500">${monthLabel}</span></td>
+                        <td class="p-4 font-bold text-gray-900">${a.winnerName}</td>
+                        <td class="p-4 text-amber-600 font-semibold">Rs. ${a.bidDiscountValue.toLocaleString('en-IN')}</td>
+                        <td class="p-4 text-emerald-600 font-semibold">Rs. ${totalPaid.toLocaleString('en-IN')} ${totalPaid >= a.bidDiscountValue ? '<i class="fa-solid fa-circle-check text-emerald-500 ml-1"></i>' : ''}</td>
+                        <td class="p-4 text-xs text-gray-600">${payoutsStr}</td>
+                        <td class="p-4 text-xs text-gray-600">${payoutModesStr}</td>
+                        <td class="p-4 text-center">
+                            <button onclick="purgeAuctionEntry(${a.id})" class="text-rose-500 hover:text-rose-700 transition p-1" title="Purge Auction"><i class="fa-solid fa-trash-can"></i></button>
+                        </td>
+                    `;
+                    aBody.appendChild(row);
+                });
+            }
+        }
+
+        function calculateDashboardMetrics() {
+            let tvm = 0;
+            let activePools = 0;
+            let closedPools = 0;
+            
+            Object.keys(globalGroupRegistry).forEach(code => {
+                const g = globalGroupRegistry[code];
+                tvm += parseFloat(g.value);
+                
+                if (isGroupClosed(code)) closedPools++;
+                else activePools++;
+            });
+
+            document.getElementById('dash-total-funds').innerText = `Rs. ${tvm.toLocaleString('en-IN')}`;
+            document.getElementById('dash-active-pools').innerText = `${activePools} Active Pools`;
+            document.getElementById('dash-closed-pools').innerText = `${closedPools} Closed Pools`;
+        }
+
+        function syncReportFiltersDropdowns() {
+            const rGroup = document.getElementById('report-group-search');
+            const rMember = document.getElementById('report-member-search');
+            const rMonth = document.getElementById('report-month-search');
+
+            const selectedGroup = rGroup.value;
+            const selectedMember = rMember.value;
+            const selectedMonth = rMonth.value;
+
+            rGroup.innerHTML = '<option value="ALL">-- All Registered Groups --</option>';
+            rMember.innerHTML = '<option value="ALL">-- All Registered Members --</option>';
+            rMonth.innerHTML = '<option value="ALL">-- All Target Months --</option>';
+
+            const memberSet = new Set();
+
+            Object.keys(globalGroupRegistry).forEach(code => {
+                const g = globalGroupRegistry[code];
+                rGroup.innerHTML += `<option value="${code}">${code} - Rs. ${g.value.toLocaleString('en-IN')}</option>`;
+                
+                g.members.forEach(m => {
+                    memberSet.add(m.name || m);
+                });
+            });
+
+            memberSet.forEach(mName => {
+                rMember.innerHTML += `<option value="${mName}">${mName}</option>`;
+            });
+
+            for (let i = 1; i <= 50; i++) {
+                rMonth.innerHTML += `<option value="${i}">Installment Month ${i}</option>`;
+            }
+
+            rGroup.value = globalGroupRegistry[selectedGroup] ? selectedGroup : "ALL";
+            rMember.value = memberSet.has(selectedMember) ? selectedMember : "ALL";
+            rMonth.value = selectedMonth;
+        }
+
+        function toggleReportTypeView() {
+            const rType = document.getElementById('report-type-select').value;
+            const groupContainer = document.getElementById('filter-group-container');
+            const memberContainer = document.getElementById('filter-member-container');
+            const monthContainer = document.getElementById('filter-month-container');
+            const statusContainer = document.getElementById('filter-status-container');
+            const secondarySec = document.getElementById('secondary-report-section');
+            const primarySubheading = document.getElementById('primary-report-subheading-container');
+            const headRow = document.getElementById('report-table-head-row');
+
+            if (rType === 'STANDARD') {
+                groupContainer.classList.remove('hidden');
+                memberContainer.classList.remove('hidden');
+                monthContainer.classList.remove('hidden');
+                statusContainer.classList.remove('hidden');
+                secondarySec.classList.remove('hidden');
+                if (primarySubheading) primarySubheading.classList.remove('hidden');
+                headRow.innerHTML = `
+                    <th class="p-4 w-12">Sl. No</th>
+                    <th class="p-4">Member Name</th>
+                    <th class="p-4">Group & Value</th>
+                    <th class="p-4">Inst. Month</th>
+                    <th class="p-4">Paid Amt</th>
+                    <th class="p-4">Due Amt</th>
+                    <th class="p-4">Pay Date</th>
+                    <th class="p-4">Pay Mode</th>
+                    <th class="p-4 text-center">Status</th>
+                `;
+            } else if (rType === 'CHIT_GROUP') {
+                groupContainer.classList.remove('hidden');
+                memberContainer.classList.add('hidden');
+                monthContainer.classList.add('hidden');
+                statusContainer.classList.add('hidden');
+                secondarySec.classList.add('hidden');
+                if (primarySubheading) primarySubheading.classList.add('hidden');
+                headRow.innerHTML = `
+                    <th class="p-4 w-16">Sl. No.</th>
+                    <th class="p-4">Month Name</th>
+                    <th class="p-4">Amount Collected</th>
+                    <th class="p-4">Amount Disbursed</th>
+                    <th class="p-4 text-right">Surplus/Deficit (+/-)</th>
+                `;
+            } else if (rType === 'CONSOLIDATE') {
+                groupContainer.classList.add('hidden');
+                memberContainer.classList.add('hidden');
+                monthContainer.classList.add('hidden');
+                statusContainer.classList.add('hidden');
+                secondarySec.classList.add('hidden');
+                if (primarySubheading) primarySubheading.classList.add('hidden');
+                headRow.innerHTML = `
+                    <th class="p-4 w-16">Sl. No.</th>
+                    <th class="p-4">Chit Group</th>
+                    <th class="p-4">Amount Collected</th>
+                    <th class="p-4">Amount Disbursed</th>
+                    <th class="p-4 text-right">Surplus/Deficit (+/-)</th>
+                `;
+            }
+        }
+
+        function compileStatusReport() {
+            const rType = document.getElementById('report-type-select').value;
+            const tbody = document.getElementById('report-output-body');
+            const titleNode = document.getElementById('dynamic-report-title');
+            const deficitSumNode = document.getElementById('report-deficit-sum');
+
+            tbody.innerHTML = '';
+            window.currentReportStatementRows = [];
+            window.currentReportGlanceRows = [];
+            window.currentReportGlanceTotal = null;
+            window.currentReportStatementTotalPaid = 0;
+
+            if (rType === 'STANDARD') {
+                const groupFilter = document.getElementById('report-group-search').value;
+                const memberFilter = document.getElementById('report-member-search').value;
+                const monthFilter = document.getElementById('report-month-search').value;
+                const statusFilter = document.getElementById('report-status-filter').value;
+                const isSpecificMember = (memberFilter !== 'ALL');
+
+                if (isSpecificMember) {
+                    titleNode.innerHTML = `STANDARD DETAILED LEDGER REPORT<br>Filters -> Group: ${groupFilter} | Member: ${memberFilter} | Month: ${monthFilter} | Status: ${statusFilter}`;
+                } else {
+                    titleNode.innerText = `STANDARD DETAILED LEDGER REPORT | Filters -> Group: ${groupFilter} | Member: ${memberFilter} | Month: ${monthFilter} | Status: ${statusFilter}`;
+                }
+
+                const headRow = document.getElementById('report-table-head-row');
+                if (isSpecificMember) {
+                    headRow.innerHTML = `
+                        <th class="p-4 w-12">Sl. No</th>
+                        <th class="p-4">Group & Value</th>
+                        <th class="p-4">Inst. Month</th>
+                        <th class="p-4">Paid Amt</th>
+                        <th class="p-4">Due Amt</th>
+                        <th class="p-4">Pay Date</th>
+                        <th class="p-4">Pay Mode</th>
+                        <th class="p-4 text-center">Status</th>
+                    `;
+                } else {
+                    headRow.innerHTML = `
+                        <th class="p-4 w-12">Sl. No</th>
+                        <th class="p-4">Member Name</th>
+                        <th class="p-4">Group & Value</th>
+                        <th class="p-4">Inst. Month</th>
+                        <th class="p-4">Paid Amt</th>
+                        <th class="p-4">Due Amt</th>
+                        <th class="p-4">Pay Date</th>
+                        <th class="p-4">Pay Mode</th>
+                        <th class="p-4 text-center">Status</th>
+                    `;
+                }
+
+                let rowsToProcess = [];
+                let groupKeys = groupFilter === 'ALL' ? Object.keys(globalGroupRegistry) : [groupFilter];
+
+                groupKeys.forEach(code => {
+                    const g = globalGroupRegistry[code];
+                    if (!g) return;
+
+                    let membersList = memberFilter === 'ALL' ? g.members : g.members.filter(m => (m.name || m) === memberFilter);
+
+                    membersList.forEach(mObj => {
+                        const mName = mObj.name || mObj;
+                        let monthKeys = monthFilter === 'ALL' ? Object.keys(g.months) : [monthFilter];
+
+                        monthKeys.forEach(mStr => {
+                            if (!g.months[mStr]) return;
+                            const monthData = g.months[mStr];
+                            const expectedBaseline = getExpectedBaseline(code, mStr, mName);
+
+                            const payments = paymentLedger.filter(p => p.groupCode === code && p.memberName === mName && String(p.monthRef) === String(mStr));
+                            const sumPaid = payments.reduce((s, p) => s + (parseFloat(p.amountPaid) || 0), 0);
+                            const due = Math.max(0, expectedBaseline - sumPaid);
+                            const statusFlag = due <= 0 ? "Paid" : (sumPaid > 0 ? "Partially Paid" : "Pending");
+
+                            if (statusFilter === 'DEFICIT' && due <= 0) return;
+                            if (statusFilter === 'CLEAR' && due > 0) return;
+
+                            rowsToProcess.push({
+                                groupCode: code,
+                                memberName: mName,
+                                monthRef: mStr,
+                                monthLabel: monthData.label,
+                                expectedBaseline,
+                                payments,
+                                sumPaid,
+                                dueAmount: due,
+                                statusFlag
+                            });
+                        });
+                    });
+                });
+
+                let totalDeficit = 0;
+                let grandTotalPaid = 0;
+
+                rowsToProcess.forEach(r => {
+                    if (r.dueAmount > 0) totalDeficit += r.dueAmount;
+                    grandTotalPaid += r.sumPaid;
+                });
+                deficitSumNode.innerText = `Rs. ${totalDeficit.toLocaleString('en-IN')}`;
+                window.currentReportStatementTotalPaid = grandTotalPaid;
+
+                if (rowsToProcess.length === 0) {
+                    const colspan = isSpecificMember ? 8 : 9;
+                    tbody.innerHTML = `<tr><td colspan="${colspan}" class="p-8 text-center text-gray-400 italic">No ledger records match the selected filter criteria.</td></tr>`;
+                    window.currentReportStatementRows = [];
+                } else {
+                    rowsToProcess.forEach((r, idx) => {
+                        const groupObj = globalGroupRegistry[r.groupCode];
+                        const groupValStr = groupObj ? `${r.groupCode} (Rs. ${groupObj.value.toLocaleString('en-IN')})` : r.groupCode;
+                        
+                        let paidAmtStr = r.payments.length > 0 ? r.payments.map(p => `Rs. ${parseFloat(p.amountPaid).toLocaleString('en-IN')}`).join('<br>') : 'Rs. 0';
+                        let payDateStr = r.payments.length > 0 ? r.payments.map(p => p.dateOfPayment).join('<br>') : '-';
+                        let payDateStrPDF = r.payments.length > 0 ? r.payments.map(p => {
+                            const d = p.dateOfPayment;
+                            if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+                                const [y, m, day] = d.split('-');
+                                return `${day}/${m}/${y}`;
+                            }
+                            return d;
+                        }).join('<br>') : '-';
+                        let payModeStr = r.payments.length > 0 ? r.payments.map(p => p.paymentMode).join('<br>') : '-';
+
+                        const statusClass = r.statusFlag === "Paid" ? "text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded font-bold text-xs" : (r.statusFlag === "Partially Paid" ? "text-amber-600 bg-amber-50 px-2 py-0.5 rounded font-bold text-xs" : "text-rose-600 bg-rose-50 px-2 py-0.5 rounded font-bold text-xs");
+
+                        window.currentReportStatementRows.push({
+                            sl: idx + 1,
+                            name: r.memberName,
+                            group: groupValStr,
+                            month: r.monthLabel,
+                            paid: paidAmtStr,
+                            due: r.dueAmount > 0 ? `Rs. ${r.dueAmount.toLocaleString('en-IN')}` : 'Cleared',
+                            date: payDateStrPDF,
+                            mode: payModeStr,
+                            status: r.statusFlag
+                        });
+
+                        const row = document.createElement('tr');
+                        row.className = "hover:bg-slate-50 transition border-b border-gray-100";
+                        
+                        if (isSpecificMember) {
+                            row.innerHTML = `
+                                <td class="p-4 text-xs text-gray-500 font-mono">${idx + 1}</td>
+                                <td class="p-4">${groupValStr}</td>
+                                <td class="p-4 text-xs text-gray-600">${r.monthLabel}</td>
+                                <td class="p-4 text-emerald-600 font-semibold">${paidAmtStr}</td>
+                                <td class="p-4 text-rose-500 font-semibold">${r.dueAmount > 0 ? `Rs. ${r.dueAmount.toLocaleString('en-IN')}` : 'Cleared'}</td>
+                                <td class="p-4 text-xs text-gray-500">${payDateStr}</td>
+                                <td class="p-4 text-xs text-gray-500">${payModeStr}</td>
+                                <td class="p-4 text-center"><span class="${statusClass}">${r.statusFlag}</span></td>
+                            `;
+                        } else {
+                            row.innerHTML = `
+                                <td class="p-4 text-xs text-gray-500 font-mono">${idx + 1}</td>
+                                <td class="p-4 font-bold text-gray-900">${r.memberName}</td>
+                                <td class="p-4">${groupValStr}</td>
+                                <td class="p-4 text-xs text-gray-600">${r.monthLabel}</td>
+                                <td class="p-4 text-emerald-600 font-semibold">${paidAmtStr}</td>
+                                <td class="p-4 text-rose-500 font-semibold">${r.dueAmount > 0 ? `Rs. ${r.dueAmount.toLocaleString('en-IN')}` : 'Cleared'}</td>
+                                <td class="p-4 text-xs text-gray-500">${payDateStr}</td>
+                                <td class="p-4 text-xs text-gray-500">${payModeStr}</td>
+                                <td class="p-4 text-center"><span class="${statusClass}">${r.statusFlag}</span></td>
+                            `;
+                        }
+                        tbody.appendChild(row);
+                    });
+
+                    const totalRow = document.createElement('tr');
+                    totalRow.className = "bg-slate-900 text-white font-bold";
+                    if (isSpecificMember) {
+                        totalRow.innerHTML = `
+                            <td class="p-4 font-bold" colspan="3">TOTAL PAID</td>
+                            <td class="p-4 text-emerald-400 font-bold" colspan="5">Rs. ${grandTotalPaid.toLocaleString('en-IN')}</td>
+                        `;
+                    } else {
+                        totalRow.innerHTML = `
+                            <td class="p-4 font-bold" colspan="4">TOTAL PAID</td>
+                            <td class="p-4 text-emerald-400 font-bold" colspan="5">Rs. ${grandTotalPaid.toLocaleString('en-IN')}</td>
+                        `;
+                    }
+                    tbody.appendChild(totalRow);
+                }
+                compileAuctionReport();
+
+            } else if (rType === 'CHIT_GROUP') {
+                let groupFilter = document.getElementById('report-group-search').value;
+                const groupKeys = Object.keys(globalGroupRegistry);
+                if (groupFilter === 'ALL' && groupKeys.length > 0) {
+                    groupFilter = groupKeys[0];
+                    document.getElementById('report-group-search').value = groupFilter;
+                }
+
+                const g = globalGroupRegistry[groupFilter];
+                if (!g) {
+                    titleNode.innerText = `CHIT GROUP (AT A GLANCE) REPORT | Chit Group & value: No Group Selected`;
+                    deficitSumNode.innerText = `Rs. 0`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-400 italic">Please select a valid Chit Group to view the At a Glance report.</td></tr>`;
+                    return;
+                }
+
+                titleNode.innerText = `CHIT GROUP (AT A GLANCE) REPORT | Chit Group & value: ${g.code} (Rs. ${g.value.toLocaleString('en-IN')})`;
+                
+                let totalCollectedAll = 0;
+                let totalDisbursedAll = 0;
+                let rowCount = 0;
+
+                Object.keys(g.months).forEach(mStr => {
+                    const monthData = g.months[mStr];
+                    rowCount++;
+
+                    let collected = 0;
+                    paymentLedger.forEach(p => {
+                        if (p.groupCode === groupFilter && String(p.monthRef) === String(mStr)) {
+                            collected += parseFloat(p.amountPaid) || 0;
+                        }
+                    });
+
+                    let disbursed = 0;
+                    historicalAuctions.forEach(a => {
+                        if (a.groupCode === groupFilter && String(a.monthRef) === String(mStr)) {
+                            if (a.payouts && a.payouts.length > 0) {
+                                a.payouts.forEach(po => { disbursed += parseFloat(po.amount) || 0; });
+                            }
+                        }
+                    });
+
+                    const net = collected - disbursed;
+                    totalCollectedAll += collected;
+                    totalDisbursedAll += disbursed;
+
+                    const netClass = net >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
+                    const netStr = net >= 0 ? `+Rs. ${net.toLocaleString('en-IN')} (Surplus)` : `-Rs. ${Math.abs(net).toLocaleString('en-IN')} (Deficit)`;
+
+                    window.currentReportGlanceRows.push({
+                        sl: rowCount,
+                        col1: `${monthData.label} (Inst. ${mStr})`,
+                        col2: `Rs. ${collected.toLocaleString('en-IN')}`,
+                        col3: `Rs. ${disbursed.toLocaleString('en-IN')}`,
+                        col4: netStr
+                    });
+
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-slate-50 transition border-b border-gray-100";
+                    row.innerHTML = `
+                        <td class="p-4 text-xs text-gray-500 font-mono">${rowCount}</td>
+                        <td class="p-4 font-bold text-gray-900">${monthData.label} <span class="text-xs text-gray-400 font-normal">(Inst. ${mStr})</span></td>
+                        <td class="p-4 text-emerald-600 font-semibold">Rs. ${collected.toLocaleString('en-IN')}</td>
+                        <td class="p-4 text-amber-600 font-semibold">Rs. ${disbursed.toLocaleString('en-IN')}</td>
+                        <td class="p-4 text-right ${netClass}">${netStr}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                const netTotal = totalCollectedAll - totalDisbursedAll;
+                deficitSumNode.innerText = `Rs. ${Math.abs(netTotal).toLocaleString('en-IN')} (${netTotal >= 0 ? 'Surplus' : 'Deficit'})`;
+                window.currentReportGlanceTotal = {
+                    collected: totalCollectedAll,
+                    disbursed: totalDisbursedAll,
+                    net: netTotal
+                };
+
+                const totalRow = document.createElement('tr');
+                totalRow.className = "bg-slate-900 text-white font-bold";
+                const totalNetStr = netTotal >= 0 ? `+Rs. ${netTotal.toLocaleString('en-IN')} (Surplus)` : `-Rs. ${Math.abs(netTotal).toLocaleString('en-IN')} (Deficit)`;
+                totalRow.innerHTML = `
+                    <td class="p-4 font-bold" colspan="2">GRAND TOTAL</td>
+                    <td class="p-4 text-emerald-400 font-bold">Rs. ${totalCollectedAll.toLocaleString('en-IN')}</td>
+                    <td class="p-4 text-amber-400 font-bold">Rs. ${totalDisbursedAll.toLocaleString('en-IN')}</td>
+                    <td class="p-4 text-right font-bold ${netTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${totalNetStr}</td>
+                `;
+                tbody.appendChild(totalRow);
+
+            } else if (rType === 'CONSOLIDATE') {
+                titleNode.innerText = `CONSOLIDATED REPORT (AT A GLANCE) | All Registered Chit Pools`;
+
+                let totalCollectedAll = 0;
+                let totalDisbursedAll = 0;
+                let rowCount = 0;
+
+                const groupCodes = Object.keys(globalGroupRegistry);
+                if (groupCodes.length === 0) {
+                    deficitSumNode.innerText = `Rs. 0`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-400 italic">No registered chit pools found.</td></tr>`;
+                    return;
+                }
+
+                groupCodes.forEach(code => {
+                    const g = globalGroupRegistry[code];
+                    rowCount++;
+
+                    let collected = 0;
+                    paymentLedger.forEach(p => {
+                        if (p.groupCode === code) collected += parseFloat(p.amountPaid) || 0;
+                    });
+
+                    let disbursed = 0;
+                    historicalAuctions.forEach(a => {
+                        if (a.groupCode === code && a.payouts) {
+                            a.payouts.forEach(po => { disbursed += parseFloat(po.amount) || 0; });
+                        }
+                    });
+
+                    const net = collected - disbursed;
+                    totalCollectedAll += collected;
+                    totalDisbursedAll += disbursed;
+
+                    const netClass = net >= 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
+                    const netStr = net >= 0 ? `+Rs. ${net.toLocaleString('en-IN')} (Surplus)` : `-Rs. ${Math.abs(net).toLocaleString('en-IN')} (Deficit)`;
+
+                    window.currentReportGlanceRows.push({
+                        sl: rowCount,
+                        col1: `${code} (Rs. ${g.value.toLocaleString('en-IN')})`,
+                        col2: `Rs. ${collected.toLocaleString('en-IN')}`,
+                        col3: `Rs. ${disbursed.toLocaleString('en-IN')}`,
+                        col4: netStr
+                    });
+
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-slate-50 transition border-b border-gray-100";
+                    row.innerHTML = `
+                        <td class="p-4 text-xs text-gray-500 font-mono">${rowCount}</td>
+                        <td class="p-4 font-bold text-gray-900">${code} <span class="text-xs text-gray-500 font-normal">(Rs. ${g.value.toLocaleString('en-IN')})</span></td>
+                        <td class="p-4 text-emerald-600 font-semibold">Rs. ${collected.toLocaleString('en-IN')}</td>
+                        <td class="p-4 text-amber-600 font-semibold">Rs. ${disbursed.toLocaleString('en-IN')}</td>
+                        <td class="p-4 text-right ${netClass}">${netStr}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                const netTotal = totalCollectedAll - totalDisbursedAll;
+                deficitSumNode.innerText = `Rs. ${Math.abs(netTotal).toLocaleString('en-IN')} (${netTotal >= 0 ? 'Surplus' : 'Deficit'})`;
+                window.currentReportGlanceTotal = {
+                    collected: totalCollectedAll,
+                    disbursed: totalDisbursedAll,
+                    net: netTotal
+                };
+
+                const totalRow = document.createElement('tr');
+                totalRow.className = "bg-slate-900 text-white font-bold";
+                const totalNetStr = netTotal >= 0 ? `+Rs. ${netTotal.toLocaleString('en-IN')} (Surplus)` : `-Rs. ${Math.abs(netTotal).toLocaleString('en-IN')} (Deficit)`;
+                totalRow.innerHTML = `
+                    <td class="p-4 font-bold" colspan="2">GRAND TOTAL</td>
+                    <td class="p-4 text-emerald-400 font-bold">Rs. ${totalCollectedAll.toLocaleString('en-IN')}</td>
+                    <td class="p-4 text-amber-400 font-bold">Rs. ${totalDisbursedAll.toLocaleString('en-IN')}</td>
+                    <td class="p-4 text-right font-bold ${netTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${totalNetStr}</td>
+                `;
+                tbody.appendChild(totalRow);
+            }
+        }
+
+        function compileAuctionReport() {
+            const groupFilter = document.getElementById('report-group-search').value;
+            const memberFilter = document.getElementById('report-member-search').value;
+            const isSpecificMember = (memberFilter !== 'ALL');
+            const tbody = document.getElementById('report-auction-output-body');
+            tbody.innerHTML = '';
+            window.currentReportAuctionRows = [];
+            window.currentReportAuctionTotalPaid = 0;
+
+            const headRow = document.getElementById('report-auction-table-head-row');
+            if (isSpecificMember) {
+                headRow.innerHTML = `
+                    <th class="p-4 w-12">Sl. No</th>
+                    <th class="p-4">Group & Value</th>
+                    <th class="p-4">Month</th>
+                    <th class="p-4">Bid Dis</th>
+                    <th class="p-4">Paid</th>
+                    <th class="p-4">Payout Dates</th>
+                    <th class="p-4">Payout Mode</th>
+                    <th class="p-4 text-center">Status</th>
+                `;
+            } else {
+                headRow.innerHTML = `
+                    <th class="p-4 w-12">Sl. No</th>
+                    <th class="p-4">Group & Value</th>
+                    <th class="p-4">Month</th>
+                    <th class="p-4">Winner</th>
+                    <th class="p-4">Bid Dis</th>
+                    <th class="p-4">Paid</th>
+                    <th class="p-4">Payout Dates</th>
+                    <th class="p-4">Payout Mode</th>
+                    <th class="p-4 text-center">Status</th>
+                `;
+            }
+
+            let filtered = historicalAuctions.filter(a => {
+                if (groupFilter !== 'ALL' && a.groupCode !== groupFilter) return false;
+                if (isSpecificMember && a.winnerName !== memberFilter) return false;
+                return true;
+            });
+
+            let grandTotalAuctionPaid = 0;
+
+            if (filtered.length === 0) {
+                const colspan = isSpecificMember ? 8 : 9;
+                tbody.innerHTML = `<tr><td colspan="${colspan}" class="p-8 text-center text-gray-400 italic">No auction records found for the current filters.</td></tr>`;
+            } else {
+                filtered.forEach((a, idx) => {
+                    const groupObj = globalGroupRegistry[a.groupCode];
+                    const groupValStr = groupObj ? `${a.groupCode} (Rs. ${groupObj.value.toLocaleString('en-IN')})` : a.groupCode;
+                    const monthLabel = groupObj?.months[a.monthRef]?.label || `M-${a.monthRef}`;
+                    const totalPaid = a.payouts ? a.payouts.reduce((sum, p) => sum + p.amount, 0) : 0;
+                    grandTotalAuctionPaid += totalPaid;
+
+                    let paidAmtStr = a.payouts && a.payouts.length > 0 ? a.payouts.map(p => `Rs. ${p.amount.toLocaleString('en-IN')}`).join('<br>') : 'Rs. 0';
+                    let payoutsStr = a.payouts && a.payouts.length > 0 ? a.payouts.map(p => p.date).join('<br>') : '-';
+                    let payoutModesStr = a.payouts && a.payouts.length > 0 ? a.payouts.map(p => p.mode).join('<br>') : '-';
+                    const statusStr = totalPaid >= a.bidDiscountValue ? 'Settled' : 'Pending Payout';
+
+                    window.currentReportAuctionRows.push({
+                        sl: idx + 1,
+                        group: groupValStr,
+                        month: monthLabel,
+                        winner: a.winnerName,
+                        disc: `Rs. ${a.bidDiscountValue.toLocaleString('en-IN')}`,
+                        paid: paidAmtStr,
+                        dates: payoutsStr,
+                        modes: payoutModesStr,
+                        status: statusStr
+                    });
+
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-slate-50 transition border-b border-gray-100";
+                    
+                    if (isSpecificMember) {
+                        row.innerHTML = `
+                            <td class="p-4 text-xs text-gray-500 font-mono">${idx + 1}</td>
+                            <td class="p-4">${groupValStr}</td>
+                            <td class="p-4 text-xs text-gray-600">${monthLabel}</td>
+                            <td class="p-4 text-amber-600 font-semibold">Rs. ${a.bidDiscountValue.toLocaleString('en-IN')}</td>
+                            <td class="p-4 text-emerald-600 font-semibold">${paidAmtStr}</td>
+                            <td class="p-4 text-xs text-gray-500">${payoutsStr}</td>
+                            <td class="p-4 text-xs text-gray-500">${payoutModesStr}</td>
+                            <td class="p-4 text-center"><span class="${totalPaid >= a.bidDiscountValue ? 'text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded font-bold text-xs' : 'text-amber-600 bg-amber-50 px-2 py-0.5 rounded font-bold text-xs'}">${statusStr}</span></td>
+                        `;
+                    } else {
+                        row.innerHTML = `
+                            <td class="p-4 text-xs text-gray-500 font-mono">${idx + 1}</td>
+                            <td class="p-4">${groupValStr}</td>
+                            <td class="p-4 text-xs text-gray-600">${monthLabel}</td>
+                            <td class="p-4 font-bold text-gray-900">${a.winnerName}</td>
+                            <td class="p-4 text-amber-600 font-semibold">Rs. ${a.bidDiscountValue.toLocaleString('en-IN')}</td>
+                            <td class="p-4 text-emerald-600 font-semibold">${paidAmtStr}</td>
+                            <td class="p-4 text-xs text-gray-500">${payoutsStr}</td>
+                            <td class="p-4 text-xs text-gray-500">${payoutModesStr}</td>
+                            <td class="p-4 text-center"><span class="${totalPaid >= a.bidDiscountValue ? 'text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded font-bold text-xs' : 'text-amber-600 bg-amber-50 px-2 py-0.5 rounded font-bold text-xs'}">${statusStr}</span></td>
+                        `;
+                    }
+                    tbody.appendChild(row);
+                });
+
+                window.currentReportAuctionTotalPaid = grandTotalAuctionPaid;
+
+                const totalRow = document.createElement('tr');
+                totalRow.className = "bg-slate-700 text-white font-bold";
+                if (isSpecificMember) {
+                    totalRow.innerHTML = `
+                        <td class="p-4 font-bold" colspan="3">TOTAL PAID</td>
+                        <td class="p-4 text-emerald-400 font-bold" colspan="5">Rs. ${grandTotalAuctionPaid.toLocaleString('en-IN')}</td>
+                    `;
+                } else {
+                    totalRow.innerHTML = `
+                        <td class="p-4 font-bold" colspan="4">TOTAL PAID</td>
+                        <td class="p-4 text-emerald-400 font-bold" colspan="5">Rs. ${grandTotalAuctionPaid.toLocaleString('en-IN')}</td>
+                    `;
+                }
+                tbody.appendChild(totalRow);
+            }
+        }
+
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const rType = document.getElementById('report-type-select').value;
+            const memberFilter = document.getElementById('report-member-search').value;
+            const isSpecificMember = (memberFilter !== 'ALL');
+
+            doc.setFillColor(30, 58, 138);
+            doc.rect(0, 0, pageWidth, 52, 'F');
+            doc.setFillColor(245, 158, 11);
+            doc.rect(0, 52, pageWidth, 2, 'F');
+            
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(16);
+            doc.setTextColor(251, 191, 36);
+            doc.text("HBP CHIT'S FINANCIAL SERVICES", pageWidth / 2, 10, { align: 'center' });
+
+            doc.setFont("helvetica", "bolditalic");
+            doc.setFontSize(12);
+            doc.setTextColor(253, 230, 138);
+            doc.text("Your Trust, Our Commitment", pageWidth / 2, 16, { align: 'center' });
+
+            doc.setFont("helvetica", "italic");
+            doc.setFontSize(12);
+            doc.setTextColor(224, 231, 255);
+            doc.text("Save Together… Grow Together… Succeed Together…", pageWidth / 2, 21, { align: 'center' });
+            
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(11);
+            doc.setTextColor(255, 255, 255);
+            doc.text("Kukatpally, Hyderabad - 500072 & Ph: 9666105665", pageWidth / 2, 28, { align: 'center' });
+            
+            let reportTitleText = "AUDIT STATEMENT REPORT";
+            if (rType === 'STANDARD') {
+                const groupFilter = document.getElementById('report-group-search').value;
+                const monthFilter = document.getElementById('report-month-search').value;
+                const statusFilter = document.getElementById('report-status-filter').value;
+                if (isSpecificMember) {
+                    reportTitleText = [
+                        "STANDARD DETAILED LEDGER REPORT",
+                        `Filters -> Group: ${groupFilter} | Member: ${memberFilter} | Month: ${monthFilter} | Status: ${statusFilter}`
+                    ];
+                } else {
+                    reportTitleText = `STANDARD DETAILED LEDGER REPORT | Filters -> Group: ${groupFilter} | Member: ${memberFilter} | Month: ${monthFilter} | Status: ${statusFilter}`;
+                }
+            }
+            else if (rType === 'CHIT_GROUP') {
+                const groupFilter = document.getElementById('report-group-search').value;
+                const g = globalGroupRegistry[groupFilter];
+                reportTitleText = `CHIT GROUP (AT A GLANCE) REPORT | Chit Group & value: ${g ? `${g.code} (Rs.${g.value.toLocaleString('en-IN')})` : 'N/A'}`;
+            }
+            else if (rType === 'CONSOLIDATE') reportTitleText = "CONSOLIDATED REPORT (AT A GLANCE)";
+
+            if (Array.isArray(reportTitleText)) {
+                doc.setFontSize(10);
+                doc.setTextColor(255, 255, 255);
+                doc.text(reportTitleText[0], pageWidth / 2, 34, { align: 'center' });
+                doc.setFontSize(8.5);
+                doc.setTextColor(253, 230, 138);
+                doc.text(reportTitleText[1], pageWidth / 2, 40, { align: 'center' });
+                doc.setFontSize(8);
+                doc.setTextColor(191, 219, 254);
+                doc.text(`Generated on: ${new Date().toLocaleDateString()}`, pageWidth / 2, 46, { align: 'center' });
+            } else {
+                doc.setFontSize(10);
+                doc.setTextColor(255, 255, 255);
+                doc.text(reportTitleText, pageWidth / 2, 36, { align: 'center' });
+                doc.setFontSize(9);
+                doc.setTextColor(191, 219, 254);
+                doc.text(`Generated on: ${new Date().toLocaleDateString()}`, pageWidth / 2, 44, { align: 'center' });
+            }
+
+            if (rType === 'STANDARD') {
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(11);
+                doc.setTextColor(30, 58, 138);
+                doc.text("Statement of Account/Collection Ledger", 14, 60);
+
+                const bodyData = window.currentReportStatementRows.map(r => {
+                    if (isSpecificMember) {
+                        return [r.sl, r.group, r.month, r.paid.replace(/<br>/g, '\n'), r.due, r.date.replace(/<br>/g, '\n'), r.mode.replace(/<br>/g, '\n'), r.status];
+                    } else {
+                        return [r.sl, r.name, r.group, r.month, r.paid.replace(/<br>/g, '\n'), r.due, r.date.replace(/<br>/g, '\n'), r.mode.replace(/<br>/g, '\n'), r.status];
+                    }
+                });
+
+                if (window.currentReportStatementRows.length > 0 && window.currentReportStatementTotalPaid !== undefined) {
+                    if (isSpecificMember) {
+                        bodyData.push([
+                            { content: 'TOTAL PAID', colSpan: 3, styles: { fontStyle: 'bold', fillColor: [15, 23, 42], textColor: [255, 255, 255], halign: 'left' } },
+                            { content: `Rs. ${window.currentReportStatementTotalPaid.toLocaleString('en-IN')}`, colSpan: 5, styles: { fontStyle: 'bold', fillColor: [15, 23, 42], textColor: [52, 211, 153], halign: 'left' } }
+                        ]);
+                    } else {
+                        bodyData.push([
+                            { content: 'TOTAL PAID', colSpan: 4, styles: { fontStyle: 'bold', fillColor: [15, 23, 42], textColor: [255, 255, 255], halign: 'left' } },
+                            { content: `Rs. ${window.currentReportStatementTotalPaid.toLocaleString('en-IN')}`, colSpan: 5, styles: { fontStyle: 'bold', fillColor: [15, 23, 42], textColor: [52, 211, 153], halign: 'left' } }
+                        ]);
+                    }
+                }
+
+                const headCols = isSpecificMember ? 
+                    ['Sl. No', 'Group & Value', 'Inst. Month', 'Paid Amt', 'Due Amt', 'Pay Date', 'Pay Mode', 'Status'] :
+                    ['Sl. No', 'Member Name', 'Group & Value', 'Inst. Month', 'Paid Amt', 'Due Amt', 'Pay Date', 'Pay Mode', 'Status'];
+
+                let standardColStyles = {};
+                if (isSpecificMember) {
+                    standardColStyles = {
+                        0: { cellWidth: 12 },
+                        1: { cellWidth: 28 },
+                        2: { cellWidth: 22 },
+                        3: { cellWidth: 22 },
+                        4: { cellWidth: 20 },
+                        5: { cellWidth: 26 },
+                        6: { cellWidth: 26 },
+                        7: { cellWidth: 26 }
+                    };
+                } else {
+                    standardColStyles = {
+                        0: { cellWidth: 12 },
+                        1: { cellWidth: 28 },
+                        2: { cellWidth: 24 },
+                        3: { cellWidth: 20 },
+                        4: { cellWidth: 20 },
+                        5: { cellWidth: 18 },
+                        6: { cellWidth: 20 },
+                        7: { cellWidth: 20 },
+                        8: { cellWidth: 20 }
+                    };
+                }
+
+                doc.autoTable({
+                    startY: 64,
+                    head: [headCols],
+                    body: bodyData.length > 0 ? bodyData : [['-', 'No records found', '-', '-', '-', '-', '-', '-', '-']],
+                    headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
+                    alternateRowStyles: { fillColor: [239, 246, 255] },
+                    styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+                    columnStyles: standardColStyles
+                });
+
+                if (window.currentReportAuctionRows && window.currentReportAuctionRows.length > 0) {
+                    let finalY = doc.lastAutoTable.finalY + 10;
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(11);
+                    doc.setTextColor(30, 58, 138);
+                    doc.text("Auction & Bid Discount Payout Details", 14, finalY);
+
+                    const auctionBody = window.currentReportAuctionRows.map(r => {
+                        if (isSpecificMember) {
+                            return [r.sl, r.group, r.month, r.disc, r.paid.replace(/<br>/g, '\n'), r.dates.replace(/<br>/g, '\n'), r.modes.replace(/<br>/g, '\n'), r.status];
+                        } else {
+                            return [r.sl, r.group, r.month, r.winner, r.disc, r.paid.replace(/<br>/g, '\n'), r.dates.replace(/<br>/g, '\n'), r.modes.replace(/<br>/g, '\n'), r.status];
+                        }
+                    });
+
+                    if (window.currentReportAuctionTotalPaid !== undefined) {
+                        if (isSpecificMember) {
+                            auctionBody.push([
+                                { content: 'TOTAL PAID', colSpan: 3, styles: { fontStyle: 'bold', fillColor: [71, 85, 105], textColor: [255, 255, 255], halign: 'left' } },
+                                { content: `Rs. ${window.currentReportAuctionTotalPaid.toLocaleString('en-IN')}`, colSpan: 5, styles: { fontStyle: 'bold', fillColor: [71, 85, 105], textColor: [52, 211, 153], halign: 'left' } }
+                            ]);
+                        } else {
+                            auctionBody.push([
+                                { content: 'TOTAL PAID', colSpan: 4, styles: { fontStyle: 'bold', fillColor: [71, 85, 105], textColor: [255, 255, 255], halign: 'left' } },
+                                { content: `Rs. ${window.currentReportAuctionTotalPaid.toLocaleString('en-IN')}`, colSpan: 5, styles: { fontStyle: 'bold', fillColor: [71, 85, 105], textColor: [52, 211, 153], halign: 'left' } }
+                            ]);
+                        }
+                    }
+
+                    const auctionHeadCols = isSpecificMember ?
+                        ['Sl. No', 'Group & Value', 'Month', 'Bid Disc.', 'Paid', 'Payout Dates', 'Payout Mode', 'Status'] :
+                        ['Sl. No', 'Group & Value', 'Month', 'Winner', 'Bid Disc.', 'Paid', 'Payout Dates', 'Payout Mode', 'Status'];
+
+                    let auctionColStyles = {};
+                    if (isSpecificMember) {
+                        auctionColStyles = {
+                            0: { cellWidth: 12 },
+                            1: { cellWidth: 28 },
+                            2: { cellWidth: 22 },
+                            3: { cellWidth: 22 },
+                            4: { cellWidth: 20 },
+                            5: { cellWidth: 26 },
+                            6: { cellWidth: 26 },
+                            7: { cellWidth: 26 }
+                        };
+                    } else {
+                        auctionColStyles = {
+                            0: { cellWidth: 12 },
+                            1: { cellWidth: 24 },
+                            2: { cellWidth: 20 },
+                            3: { cellWidth: 26 },
+                            4: { cellWidth: 20 },
+                            5: { cellWidth: 18 },
+                            6: { cellWidth: 22 },
+                            7: { cellWidth: 20 },
+                            8: { cellWidth: 20 }
+                        };
+                    }
+
+                    doc.autoTable({
+                        startY: finalY + 4,
+                        head: [auctionHeadCols],
+                        body: auctionBody,
+                        headStyles: { fillColor: [71, 85, 105], textColor: 255, fontStyle: 'bold' },
+                        alternateRowStyles: { fillColor: [241, 245, 249] },
+                        styles: { fontSize: 8, cellPadding: 3, font: 'helvetica' },
+                        columnStyles: auctionColStyles
+                    });
+                }
+            } else {
+                const bodyData = window.currentReportGlanceRows.map(r => [
+                    r.sl, r.col1, r.col2, r.col3, r.col4
+                ]);
+
+                if (window.currentReportGlanceTotal) {
+                    const gt = window.currentReportGlanceTotal;
+                    const netStr = gt.net >= 0 ? `+Rs. ${gt.net.toLocaleString('en-IN')} (Surplus)` : `-Rs. ${Math.abs(gt.net).toLocaleString('en-IN')} (Deficit)`;
+                    bodyData.push([
+                        { content: 'GRAND TOTAL', colSpan: 2, styles: { fontStyle: 'bold', fillColor: [15, 23, 42], textColor: [255, 255, 255], halign: 'left' } },
+                        { content: `Rs. ${gt.collected.toLocaleString('en-IN')}`, colSpan: 1, styles: { fontStyle: 'bold', fillColor: [15, 23, 42], textColor: [52, 211, 153], halign: 'left' } },
+                        { content: `Rs. ${gt.disbursed.toLocaleString('en-IN')}`, colSpan: 1, styles: { fontStyle: 'bold', fillColor: [15, 23, 42], textColor: [251, 191, 36], halign: 'left' } },
+                        { content: netStr, colSpan: 1, styles: { fontStyle: 'bold', fillColor: [15, 23, 42], textColor: gt.net >= 0 ? [52, 211, 153] : [244, 63, 94], halign: 'right' } }
+                    ]);
+                }
+
+                const headCols = rType === 'CHIT_GROUP' ? 
+                    ['Sl. No.', 'Month Name', 'Amount Collected', 'Amount Disbursed', 'Surplus/Deficit (+/-)'] :
+                    ['Sl. No.', 'Chit Group', 'Amount Collected', 'Amount Disbursed', 'Surplus/Deficit (+/-)'];
+
+                doc.autoTable({
+                    startY: 58,
+                    head: [headCols],
+                    body: bodyData.length > 0 ? bodyData : [['-', 'No records found', '-', '-', '-']],
+                    headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
+                    alternateRowStyles: { fillColor: [239, 246, 255] },
+                    styles: { fontSize: 9, cellPadding: 3.5, font: 'helvetica' },
+                    columnStyles: {
+                        0: { cellWidth: 18 },
+                        1: { cellWidth: 54 },
+                        2: { cellWidth: 36 },
+                        3: { cellWidth: 36 },
+                        4: { cellWidth: 38, halign: 'right' }
+                    }
+                });
+            }
+
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(148, 163, 184);
+                doc.text(`Page ${i} of ${pageCount} - HBP CHIT'S Financial Services`, pageWidth / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
+            }
+
+            doc.save(`HBP_Chits_${rType}_Report.pdf`);
+        }
+    </script>
+</body>
+</html>
